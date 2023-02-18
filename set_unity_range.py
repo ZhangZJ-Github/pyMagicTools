@@ -27,7 +27,7 @@ class FLD_tool:
     def __init__(self, filename):
         t = time.time()
         self.filename = filename
-        self.linelist = ""
+        self.linelist = []
         with open(self.filename, 'r') as f:
             self.linelist = f.readlines()
         logger.info("dt = %.2f" % (time.time() - t))
