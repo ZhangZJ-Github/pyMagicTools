@@ -4,11 +4,10 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : test.py
 # @Software: PyCharm
-import re
-fn = r"F:\MagicFiles\CherenkovAcc\test.txt"
-txt = ""
-with open (fn ,"r") as f:
-    txt = f.read()
+import matplotlib
 
-res = re.findall(r"\s+", txt)
-pass
+matplotlib.use("TkAgg")
+
+import matplotlib.pyplot as plt
+
+plt.plot([1,2],[3,4])

@@ -7,15 +7,14 @@
 import enum
 import re
 import time
-from io import StringIO
 from typing import Dict, List
 
-import matplotlib.pyplot as plt
 import numpy
-import pandas
+
+
 class FrequentUsedPatter:
     # 浮点数，形如+1.5545E+9 1.0
-    float = r'([-+]?[0-9]+)(\.[0-9]+)?([Ee][-+][0-9]+)?'
+    float = r'([-+]?[0-9]+\.?[0-9]+)([Ee][-+][0-9]+)?'
 
 
 frequent_used_unit_to_SI_unit = {
@@ -38,9 +37,7 @@ class ParserBase:
     """
     n_file_info = 1  # 用于描述整个文件的编码方式的行数
     n_lines_DMPSTARTBLOCK_tag_each_block = 1
-    n_block_boundaries = 1
-    n_block_header = 1
-    n_block_grid = 1
+
     startblock_tag_pattern = r" \$DMP\$DMP\$DMP\$DMPSTARTBLOCK\s+[0-9]+\s+\n"
 
     class BlockType(enum.Enum):
@@ -50,6 +47,7 @@ class ParserBase:
         RANGE = 3
         OBSERVE = 4
         PHASESPACE = 5
+        SOLIDFILL = 6
         NOT_IMPLEMENT = 1008611
 
     dict_name_to_BlockType: Dict[str, BlockType] = {t.name: t for t in BlockType}
@@ -94,7 +92,10 @@ class ParserBase:
         self.blocks_groupby_type: Dict[ParserBase.BlockType, List[str]] = {t: [] for t in ParserBase.BlockType}
         for blk in self.block_list:
             self.blocks_groupby_type[self.get_block_type(blk)].append(blk)
-def find_data_near_t(data_all_time, t,how_to_get_t= lambda data,i :data[i]['t'],how_to_get_data= lambda data,i :data[i]['data'] ):
+
+
+def find_data_near_t(data_all_time, t, how_to_get_t=lambda data, i: data[i]['t'],
+                     how_to_get_data=lambda data, i: data[i]['data']):
     """
     :param data_all_time: 按照时间升序排列，data[i]['t']应存在
     :param t:
@@ -102,10 +103,10 @@ def find_data_near_t(data_all_time, t,how_to_get_t= lambda data,i :data[i]['t'],
     """
     delta_t = numpy.Inf
     for i in range(len(data_all_time)):
-        new_delta_t = abs(how_to_get_t(data_all_time, i ) - t)
+        new_delta_t = abs(how_to_get_t(data_all_time, i) - t)
         if new_delta_t < delta_t:
             delta_t = new_delta_t
         else:
             break
     i = max(i - 1, 0)
-    return  how_to_get_t(data_all_time, i), how_to_get_data(data_all_time, i)
+    return how_to_get_t(data_all_time, i), how_to_get_data(data_all_time, i),i

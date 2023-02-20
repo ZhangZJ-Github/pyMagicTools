@@ -23,7 +23,7 @@ class PAR(_base.ParserBase):
 
     def parse_all_phase_space_datas(self):
         raw_ranges = self.blocks_groupby_type[self.BlockType.PHASESPACE]
-        self.phasespaces: Dict[str, List[Dict[str, Union[float, pandas.DataFrame]]]] = {}
+        self.phasespaces: Dict[str, List[Dict[str, Union[float, pandas.DataFrame]]]] = {}# 所有时间片的相空间数据
         for rangestr in raw_ranges:
             line_list = rangestr.splitlines(True)
             title = line_list[2][:-1]  # Without '\n'
@@ -47,6 +47,11 @@ class PAR(_base.ParserBase):
             })
             self.phasespaces[title] = phasespace_of_this_title
         return self.phasespaces
+    def get_data_by_time(self,t,title):
+        return _base.find_data_near_t(
+            self.phasespaces[title],t,
+            lambda phase_space_data, i: phase_space_data[i]["t"],
+            lambda phase_space_data, i: phase_space_data[i]["data"])
 
 
 if __name__ == '__main__':

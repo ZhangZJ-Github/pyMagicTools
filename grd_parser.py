@@ -37,6 +37,9 @@ class GRD(_base.ParserBase):
 
 
     """
+    n_block_boundaries = 1
+    n_block_header = 1
+    n_block_grid = 1
    
 
     # class BoundariesBlock :
@@ -85,8 +88,11 @@ class GRD(_base.ParserBase):
             self.ranges[title] = range_of_this_title
         return self.ranges
 
-
-
+    def get_data_by_time (self, t, title):
+        return _base.find_data_near_t(
+            self.ranges[title], t,
+            lambda ranges, i: ranges[i]["t"],
+            lambda ranges, i: ranges[i]["data"])
 
 
 def plot_EZ_JZ(all_range_data, t, axs: List[plt.Axes]# = plt.subplots(2, 1, sharex=True)[1]
@@ -98,7 +104,7 @@ def plot_EZ_JZ(all_range_data, t, axs: List[plt.Axes]# = plt.subplots(2, 1, shar
     for i in range(2):
         title = titles[i]
         data_all_time = all_range_data[title]
-        t, data_ =_base. find_data_near_t(data_all_time, t)
+        t, data_,_ =_base. find_data_near_t(data_all_time, t)
         # data_.iloc[:, 0] *= 1e3
         axs[i].plot(*(data_.values.T.tolist()), fmts[i], label="t = %.4e" % t)
         axs[i].set_title(titles[i])

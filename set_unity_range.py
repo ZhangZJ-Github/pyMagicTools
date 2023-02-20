@@ -9,18 +9,21 @@
 为MAGIC导出的场文件自动设置范围，以便显示
 """
 import re
-from typing import *
-from _logging import logger
 import time
+from typing import *
+
 import numpy
+
+import _base
+from _logging import logger
 
 
 def str_list_to_file(sl: List[str], filename: str):
-    t= time.time()
+    t = time.time()
     s = ''.join(sl)
     with open(filename, "w") as f:
         f.write(s)
-    logger.info("dt = %.2f"%(time.time()-t))
+    logger.info("dt = %.2f" % (time.time() - t))
 
 
 class FLD_tool:
@@ -30,14 +33,30 @@ class FLD_tool:
         self.linelist = []
         with open(self.filename, 'r') as f:
             self.linelist = f.readlines()
-        logger.info("dt = %.2f" % (time.time() - t))
-        t = time.time()
-        self.indexes_of_timestep, self.indexes_of_value_range, self.n_x1_each_t, self.n_x2_each_t, self.n_timesteps = self.important_indexes(
-            self.linelist)
+        # logger.info("dt = %.2f" % (time.time() - t))
+        # t = time.time()
+        self.parse_important_indexes()
+        self.x1 = self._get_data(self.indexes_of_x1s[0], self.n_line_x1_each_t)
+        self.x2 = self._get_data(self.indexes_of_x2s[0], self.n_line_x2_each_t)
+
+        assert len(self.x1) == self.n_x1_each_t
+
         logger.info("dt = %.2f" % (time.time() - t))
 
-    @staticmethod
-    def important_indexes(line_list: list):
+    def _get_data(self, index_of_1st_line, n_lines):
+        return numpy.fromstring(''.join(self.linelist[index_of_1st_line:index_of_1st_line + n_lines]), dtype=float,
+                                sep=' ')
+
+    def get_values(self, i):
+        t = self.get_time(i)
+        values = self._get_data(self.indexes_of_values[i], self.n_line_values_each_t)
+        return t, values, self.x1, self.x2
+
+    def get_time(self, i):
+        return ''.join(re.findall(r' SOLIDFILL\s+' + _base.FrequentUsedPatter.float,
+                                  self.linelist[self.indexes_of_titles[i] - 11])[0])
+
+    def parse_important_indexes(self):
         """
         根据文件内容的前面几行，解析出我们关心的一些重要信息所在的行数
         :return:
@@ -46,20 +65,25 @@ class FLD_tool:
         n_info_each_t = 20 - 2
         i_value_range_each_t = 19 - 2  # 每个时间片中，用于设置场显示范围的那一行的相对位置
         i_time_each_t = 14 - 2
-        info = line_list[7]
+        info = self.linelist[7]
         strs_n_x1_n_x2 = re.findall(r"[0-9]+_BY_", info)
-        n_x1_each_t, n_x2_each_t = (int(strs_n_x1_n_x2[i][:-4]) for i in range(2))
-        n_values_each_t = n_x1_each_t * n_x2_each_t
+        self.n_x1_each_t, self.n_x2_each_t = (int(strs_n_x1_n_x2[i][:-4]) for i in range(2))
+        self.n_values_each_t = self.n_x1_each_t * self.n_x2_each_t
         n_values_each_line = 5
-        n_line_x1_each_t, n_line_x2_each_t, n_line_values_each_t = numpy.ceil(
-            numpy.array((n_x1_each_t, n_x2_each_t, n_values_each_t)) / numpy.array((n_values_each_line,) * 3)).astype(
+        self.n_line_x1_each_t, self.n_line_x2_each_t, self.n_line_values_each_t = numpy.ceil(
+            numpy.array((self.n_x1_each_t, self.n_x2_each_t, self.n_values_each_t)) / numpy.array(
+                (n_values_each_line,) * 3)).astype(
             int)
-        n_lines_each_time = n_info_each_t + 2 + n_line_x1_each_t + n_line_x2_each_t + n_line_values_each_t
-        n_timesteps = (len(line_list) - 1) / n_lines_each_time
-        arr = n_lines_each_time * numpy.arange(n_timesteps).astype(int) + n_file_info
-        indexes_of_timestep = arr + i_time_each_t  # 涉及时间片信息的（绝对）行号
-        indexes_of_value_range = arr + i_value_range_each_t
-        return indexes_of_timestep, indexes_of_value_range, n_x1_each_t, n_x2_each_t, n_timesteps
+        self.n_lines_each_time = n_info_each_t + 2 + self.n_line_x1_each_t + self.n_line_x2_each_t + self.n_line_values_each_t
+        self.n_blocks = (len(self.linelist) - 1) / self.n_lines_each_time
+        arr = self.n_lines_each_time * numpy.arange(self.n_blocks).astype(int) + n_file_info
+        self.indexes_of_titles = arr + i_time_each_t  # 涉及时间片信息的（绝对）行号
+        self.indexes_of_value_range = arr + i_value_range_each_t
+        self.indexes_of_x1s = self.indexes_of_value_range + 2
+        self.indexes_of_x2s = self.indexes_of_x1s + self.n_line_x1_each_t
+        self.indexes_of_values = self.indexes_of_x2s + 1 + self.n_line_x2_each_t
+
+        # return indexes_of_titles, indexes_of_value_range, n_x1_each_t, n_x2_each_t, n_blocks, indexes_of_x1s, indexes_of_x2s, indexes_of_values
 
     def replace_value_range(self, new_value_range_start, new_value_range_end, new_value_range_step=None):
 
@@ -71,13 +95,12 @@ class FLD_tool:
         t = time.time()
         for i in self.indexes_of_value_range:
             self.linelist[i] = "  $$$RANGE(%.4e, %.4e, %.4e)\n" % (
-            new_value_range_start, new_value_range_end, new_value_range_step)
+                new_value_range_start, new_value_range_end, new_value_range_step)
         str_list_to_file(self.linelist, self.filename)
         logger.info("dt = %.2f" % (time.time() - t))
 
 
-
 if __name__ == '__main__':
-    filename = r"F:\MagicFiles\CherenkovAcc\Coax-inner_cone_and_sheet.fld"
+    filename = r"F:\MagicFiles\CherenkovAcc\cascade\Coax-2-cascade-higher-gradient-06.fld"
     fld = FLD_tool(filename)
     fld.replace_value_range(-1e6, 1e6, )
