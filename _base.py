@@ -107,6 +107,6 @@ def find_data_near_t(data_all_time, t, how_to_get_t=lambda data, i: data[i]['t']
         if new_delta_t < delta_t:
             delta_t = new_delta_t
         else:
+            i = max(i - 1, 0)
             break
-    i = max(i - 1, 0)
     return how_to_get_t(data_all_time, i), how_to_get_data(data_all_time, i),i
