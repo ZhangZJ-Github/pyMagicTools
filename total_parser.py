@@ -4,6 +4,8 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : total_parser.py
 # @Software: PyCharm
+import shutil
+
 import matplotlib
 
 matplotlib.use("TkAgg")
@@ -15,6 +17,7 @@ from typing import List
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg  # mpimg 用于读取图片
 import numpy
+import re
 
 import fld_parser
 import grd_parser
@@ -31,7 +34,8 @@ class ExtTool:
         par = ".par"
         fld = ".fld"
         grd = ".grd"
-        geom_png = '.geom.png'
+        m2d = ".m2d"
+        geom_png = '.geom.png'  # 手动截图的建议后缀
 
     def __init__(self, filename_no_ext):
         self.filename_no_ext = filename_no_ext
@@ -40,15 +44,31 @@ class ExtTool:
         return self.filename_no_ext + ext.value
 
 
+def validateTitle(title):
+    """
+    将文本替换为合法的文件夹名字
+    :param title:
+    :return:
+    """
+    rstr = r"[\/\\\:\*\?\"\<\>\|]"  # '/ \ : * ? " < > |'
+    new_title = re.sub(rstr, "_", title)  # 替换为下划线
+    return new_title
+
+
 def _par_filtered(particle_data_, particle_frac):
     filter = numpy.random.rand(len(particle_data_)) < particle_frac
     particle_data_ = particle_data_.iloc[filter, :]
     return particle_data_
 
 
-def plot_Ez_with_phasespace(grd: grd_parser, par: par_parser.PAR, t, axs: List[plt.Axes], particle_frac=0.3):
+def plot_Ez_with_phasespace(grd: grd_parser, par: par_parser.PAR, t, axs: List[plt.Axes], particle_frac=0.3,
+                            title_Ez_along_axis: str = None, title_phasespace_x1_kE: str = None):
     assert len(axs) == 2
-    titles = [" FIELD EZ @LINE_AXIS$ #1.1", " ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000"]
+    titles = [title_Ez_along_axis, title_phasespace_x1_kE]
+    if not title_Ez_along_axis:
+        titles[0] = " FIELD EZ @LINE_AXIS$ #1.1"
+    if not title_phasespace_x1_kE:
+        titles[1] = " ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000"
     # datas = range_datas[titles[0]], phasespace_datas[titles[1]]
     parsers = [grd, par]
     fmts = ["", '.']
@@ -112,8 +132,11 @@ def get_min_and_max(fld: fld_parser.FLD, contour_title, indexes: slice = None):
 def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, t, axs: List[plt.Axes], frac=0.3,
                                geom_picture_path=r"F:\MagicFiles\CherenkovAcc\cascade\Coax-2-cascade-higher-gradient-06.geom.png",
                                geom_range=None,  # zmin ,rmin,zmax,rmax
-                               old_phasespace_data_z_Ek=numpy.array([[0], [0]]), contour_range=[]):
-    contour_title = " FIELD EZ @OSYS$AREA,SHADE-#1"
+                               old_phasespace_data_z_Ek=numpy.array([[0], [0]]), contour_range=[],
+                               contour_title: str = None, phasespace_title_z_Ek: str = None,
+                               phasespace_title_z_r: str = None):
+    # if not contour_title:
+    #     contour_title = " FIELD EZ @OSYS$AREA,SHADE-#1"
     t_actual, field_data, i = fld.get_field_value_by_time(t, contour_title)
     logger.info("t_actual of Ez: %.4e" % (t_actual))
 
@@ -121,8 +144,10 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, t, axs:
         vmin, vmax = get_min_and_max(fld, contour_title)
     else:
         vmin, vmax = contour_range
-    phasespace_title_z_Ek = " ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000"
-    phasespace_title_z_r = " ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000"
+    if not phasespace_title_z_Ek:
+        phasespace_title_z_Ek = " ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000"
+    if not phasespace_title_z_r:
+        phasespace_title_z_r = " ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000"
 
     t_actual, phasespace_z_Ek_data, _ = par.get_data_by_time(t_actual, phasespace_title_z_Ek)
     logger.info("t_actual of z Ek: %.4e" % (t_actual))
@@ -179,10 +204,9 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, t, axs:
     axs[1].scatter(*new_phasespace_z_Ek_data, s=.3,
                    label="t = %.4e s" % t_actual)
     old_phasespace_data_z_Ek = numpy.hstack([old_phasespace_data_z_Ek, new_phasespace_z_Ek_data])
-
-    (ax.ticklabel_format(style='sci', scilimits=(-1, 2), axis='x') for ax in axs)
-    axs[0].ticklabel_format(style='sci', scilimits=(-1, 2), axis='y')
-    axs[1].ticklabel_format(style='sci', scilimits=(-1, 2), axis='y')
+    for ax in axs:
+        ax.ticklabel_format(style='sci', scilimits=(-1, 2), axis='x')
+        ax.ticklabel_format(style='sci', scilimits=(-1, 2), axis='y')
     axs[1].grid()
     axs[0].set_ylabel("r / m")
     axs[1].set_xlabel('z / m')
@@ -199,30 +223,27 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, t, axs:
     return old_phasespace_data_z_Ek, t_actual
 
 
-if __name__ == '__main__':
-    plt.ioff()
-    filename_no_ext = os.path.splitext(
-        r"F:\MagicFiles\CherenkovAcc\cascade\Coax-2-cascade-higher-gradient-19.fld"
-    )[0]
-    et = ExtTool(filename_no_ext)
-    fld = fld_parser.FLD(et.get_name_with_ext(ExtTool.FileType.fld))
-    grd = grd_parser.GRD(et.get_name_with_ext(ExtTool.FileType.grd))
-    par = par_parser.PAR(et.get_name_with_ext(ExtTool.FileType.par))
-    frac = 1
-    res_dir_name = ".out/%s" % (os.path.split(et.filename_no_ext)[1])
-    os.makedirs(res_dir_name, exist_ok=True)
-
-    fig, axs = plt.subplots(2, 1, sharex=True,
-                            figsize=(16, 9))
-    for t in numpy.arange(0, 100e-12, 4e-12):
-        # for t in [32e-12,36e-12,42e-12,54e-12,64e-12,68e-12,82e-12,108e-12]:
-        plot_Ez_with_phasespace(grd, par, t, axs, .3)
-    plt.savefig(os.path.join(res_dir_name, '轴上电场.png'))
-    plt.close()
-
-    old_phasespace_data = numpy.array([[0], [0]])
+def export_contours_in_folder(
+        fld: fld_parser.FLD, par: par_parser.PAR, et: ExtTool, contour_title: str,  # ' FIELD EX @OSYS$AREA,SHADE-#1'
+        res_dir_name,
+        t_end, dt=2e-12,
+):
+    """
+    将contour输出到同一文件夹下
+    :param fld:
+    :param par:
+    :param et:
+    :param t_end:
+    :param dt:
+    :param contour_title:
+    :return:
+    """
+    # old_phasespace_data = numpy.array([[0], [0]])
     old_pahsespace_data_z_Ek = numpy.array([[0], [0]])
-    for t in numpy.arange(12e-12, 158e-12, 2e-12):
+    plt.ioff()
+    res_dir_name_with_title = os.path.join(res_dir_name, validateTitle(contour_title))
+    os.makedirs(res_dir_name_with_title, exist_ok=True)
+    for t in numpy.arange(0, t_end, dt):
         old_pahsespace_data_z_Ek, t_actual = plot_contour_vs_phasespace(
             fld, par, t,
             plt.subplots(
@@ -231,11 +252,45 @@ if __name__ == '__main__':
             frac,
             geom_picture_path=et.get_name_with_ext(ExtTool.FileType.geom_png),
             # geom_range=[-1.3493e-3, 0, 25.257e-3, 3.9963e-3],
-            old_phasespace_data_z_Ek=old_pahsespace_data_z_Ek, contour_range=[-2e7, 2e7])
+            old_phasespace_data_z_Ek=old_pahsespace_data_z_Ek, contour_range=[-2e8, 2e8],
+            contour_title=contour_title
+        )
         # plt.get_current_fig_manager().window.state('zoomed')
-        plt.savefig("%s/%03d_ps.png" % (res_dir_name, numpy.round(t_actual * 1e12)))
+        plt.savefig("%s/%03d_ps.png" % (res_dir_name_with_title, numpy.round(t_actual * 1e12)))
         plt.close()
-
     # plt.show()
+    logger.info("See result:\n%s" % (res_dir_name_with_title))
 
+
+def copy_m2d_to_res_folder(res_dir_name, et: ExtTool):
+    m2dfn = et.get_name_with_ext(ExtTool.FileType.m2d)
+    m2dfn_target = os.path.join(res_dir_name, os.path.split(m2dfn)[1])
+    shutil.copyfile(m2dfn, m2dfn_target)
+
+
+if __name__ == '__main__':
+    plt.ioff()
+    filename_no_ext = os.path.splitext(
+        r"F:\MagicFiles\CherenkovAcc\cascade\251keV-04.tlg"
+    )[0]
+    et = ExtTool(filename_no_ext)
+    fld = fld_parser.FLD(et.get_name_with_ext(ExtTool.FileType.fld))
+    grd = grd_parser.GRD(et.get_name_with_ext(ExtTool.FileType.grd))
+    par = par_parser.PAR(et.get_name_with_ext(ExtTool.FileType.par))
+    frac = 1
+    res_dir_name = "%s/.out/%s" % (os.path.split(et.filename_no_ext))
+    os.makedirs(res_dir_name, exist_ok=True)
+    copy_m2d_to_res_folder(res_dir_name, et)
+    t_end = par.phasespaces[tuple(par.phasespaces.keys())[0]][-1]['t']
+    fig, axs = plt.subplots(2, 1, sharex=True,
+                            figsize=(16, 9))
+    for t in numpy.arange(0, t_end, 2e-12):
+        # for t in [32e-12,36e-12,42e-12,54e-12,64e-12,68e-12,82e-12,108e-12]:
+        plot_Ez_with_phasespace(grd, par, t, axs, .3,  # ' FIELD EX @LINE_AXIS$ #1.1',
+                                )
+    plt.savefig(os.path.join(res_dir_name, '轴上电场.png'))
+    plt.close()
+    # old_phasespace_data = numpy.array([[0], [0]])
+    export_contours_in_folder(fld, par, et, ' FIELD EZ @OSYS$AREA,SHADE-#1', res_dir_name, t_end, 2e-12)
+    # logger.info("See result:\n%s" % (res_dir_name))
     pass

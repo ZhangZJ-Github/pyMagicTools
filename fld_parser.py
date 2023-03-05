@@ -59,11 +59,11 @@ class FLD(_base.ParserBase):
         field_values = self._get_data(linelist, i_field_value_start, n_line_values)
         field_ranges = [
             float(s) for s in re.findall(
-            r'RANGE\(' + (
-                    (r"\s*(" + _base.FrequentUsedPatter.float
-                     + ")\s*" + r',\s*') * 2
-            ) + "(" + _base.FrequentUsedPatter.float + r')\s*\)',
-            linelist[19 - 2])[0][0:-1:3]
+                r'RANGE\(' + (
+                        (r"\s*(" + _base.FrequentUsedPatter.float
+                         + ")\s*" + r',\s*') * 2
+                ) + "(" + _base.FrequentUsedPatter.float + r')\s*\)',
+                linelist[19 - 2])[0][0:-1:3]
         ]
 
         return field_values, field_ranges, title, t
@@ -87,17 +87,22 @@ class FLD(_base.ParserBase):
         for i in range(len(self.block_list)):
             field_values, field_ranges, title, t = self.get_values_by_index(i)
             field_values_of_this_title = field_values_all_t.get(title, [])
-            field_values_of_this_title.append({
-                "t": t,
-                "data": {
-                    "x1s": self.x1x2grid[0],
-                    "x2s": self.x1x2grid[1],
-                    "field_value": field_values.reshape(self.x1x2grid[0].shape),
-                    "field_value_range": field_ranges
-                }
-            })
+            try:
+                field_values_of_this_title.append({
+                    "t": t,
+                    "data": {
+                        "x1s": self.x1x2grid[0],
+                        "x2s": self.x1x2grid[1],
+                        "field_value": field_values.reshape(self.x1x2grid[0].shape),
+                        "field_value_range": field_ranges
+                    }
+                })
+            except ValueError as ve:
+                logger.warn("时间片%.2e %s解析失败" % (t, title))
+                logger.error(ve)
+
             field_values_all_t[title] = field_values_of_this_title
-        logger.info("%.2f" % (time.time() - t0))
+        logger.info("解析所有存储的场数据耗时：%.2f" % (time.time() - t0))
         return field_values_all_t
 
     def get_field_value_by_time(self, t, title=" FIELD EZ @OSYS$AREA,SHADE-#1"):

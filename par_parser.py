@@ -36,7 +36,7 @@ class PAR(_base.ParserBase):
             for i in range(n_512_lines_block - 1):
                 data_lines += (line_list[i_data_start + 1:i_data_start + 513])
                 i_data_start += 513
-            data_lines += (line_list[i_data_start+1:i_data_start + lines_of_data % 512 + 1])
+            data_lines += (line_list[i_data_start+1:i_data_start + lines_of_data % 513 + 1])
             data_str = ''.join(data_lines)
 
             phasespace_of_this_title = self.phasespaces.get(title, [])
