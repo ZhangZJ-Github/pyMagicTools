@@ -6,6 +6,7 @@
 # @Software: PyCharm
 import re
 import time
+import typing
 
 import numpy
 
@@ -19,7 +20,8 @@ class FLD(_base.ParserBase):
         t = time.time()
 
         super(FLD, self).__init__(filename)
-        self.x1x2grid = self.build_x1_x2_meshgrid(0)[:2]
+        # self.x1x2grid = self.build_x1_x2_meshgrid(0)[:2]
+        self.x1x2grid: typing.Dict[str, typing.Tuple[numpy.ndarray, numpy.ndarray]] = {}
         self.field_values_all_t = None
         logger.info("dt = %.2f" % (time.time() - t))
 
@@ -87,20 +89,21 @@ class FLD(_base.ParserBase):
         for i in range(len(self.block_list)):
             field_values, field_ranges, title, t = self.get_values_by_index(i)
             field_values_of_this_title = field_values_all_t.get(title, [])
+            if title not in self.x1x2grid:
+                self.x1x2grid[title] = self.build_x1_x2_meshgrid(i)[:2]
             try:
                 field_values_of_this_title.append({
                     "t": t,
                     "data": {
-                        "x1s": self.x1x2grid[0],
-                        "x2s": self.x1x2grid[1],
-                        "field_value": field_values.reshape(self.x1x2grid[0].shape),
+                        # "x1s": self.x1x2grid[0],
+                        # "x2s": self.x1x2grid[1],
+                        "field_value": field_values.reshape(self.x1x2grid[title][0].shape),
                         "field_value_range": field_ranges
                     }
                 })
-            except ValueError as ve:
-                logger.warn("时间片%.2e %s解析失败" % (t, title))
-                logger.error(ve)
-
+            except ValueError as e:
+                logger.warn("跳过了一个时间片（i = %d, t = %.2e, title = %s）\n%s" % (
+                    i, t, title, e))
             field_values_all_t[title] = field_values_of_this_title
         logger.info("解析所有存储的场数据耗时：%.2f" % (time.time() - t0))
         return field_values_all_t

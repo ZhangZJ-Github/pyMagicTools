@@ -124,17 +124,18 @@ def get_min_and_max(fld: fld_parser.FLD, contour_title, indexes: slice = None):
 
     for fd in filtered_data:
         field_range_start, field_range_end, field_range_step = fd['data']['field_value_range']
-        vmax = max(-field_range_start, vmax)
+        vmax = max(field_range_end, vmax)
         vmin = min(field_range_start, vmin)
     return vmin, vmax
 
 
-def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, t, axs: List[plt.Axes], frac=0.3,
+def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, t, axs: List[plt.Axes],
+                               frac=0.3,
                                geom_picture_path=r"F:\MagicFiles\CherenkovAcc\cascade\Coax-2-cascade-higher-gradient-06.geom.png",
                                geom_range=None,  # zmin ,rmin,zmax,rmax
                                old_phasespace_data_z_Ek=numpy.array([[0], [0]]), contour_range=[],
                                contour_title: str = None, phasespace_title_z_Ek: str = None,
-                               phasespace_title_z_r: str = None):
+                               phasespace_title_z_r: str = None, Ez_title=None, ):
     # if not contour_title:
     #     contour_title = " FIELD EZ @OSYS$AREA,SHADE-#1"
     t_actual, field_data, i = fld.get_field_value_by_time(t, contour_title)
@@ -142,6 +143,8 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, t, axs:
 
     if not contour_range:
         vmin, vmax = get_min_and_max(fld, contour_title)
+        _ = max(abs(vmin), vmax)
+        vmin, vmax = -_, _
     else:
         vmin, vmax = contour_range
     if not phasespace_title_z_Ek:
@@ -155,9 +158,9 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, t, axs:
     t_actual, phase_space_data_z_r, _ = par.get_data_by_time(t_actual, phasespace_title_z_r)
     logger.info("t_actual of z r: %.4e" % (t_actual))
 
-    logger.info("Start plot")
+    # logger.info("Start plot")
     # 显示轴对称的另一部分
-    x1g, x2g = fld.x1x2grid
+    x1g, x2g = fld.x1x2grid[contour_title]
     x1g_sym = numpy.vstack([x1g, x1g])
     x2g_sym = numpy.vstack([-x2g[::-1], x2g])
     # field_data = field_data.values
@@ -211,22 +214,35 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, t, axs:
     axs[0].set_ylabel("r / m")
     axs[1].set_xlabel('z / m')
     axs[1].set_ylabel('energy of particle / eV')
+    ax_for_Ez: plt.Axes = axs[1].twinx()
+    t_Ez, Ez_data, _ = grd.get_data_by_time(t_actual, Ez_title)
+    particle_zs = new_phasespace_z_Ek_data[0]
+    ax_for_Ez.axvline((particle_zs.min() + particle_zs.max()) / 2, alpha=.3)
+    ax_for_Ez.plot(*Ez_data.values.T, color='darkred')
+
+    Ez_max_for_plt = max(abs(vmin), abs(vmax))
+    ax_for_Ez.set_ylim(ymin=-Ez_max_for_plt, ymax=Ez_max_for_plt)
+    ax_for_Ez.set_ylabel("E (V/m)")
+    ax_for_Ez.ticklabel_format(style='sci', scilimits=(-1, 2), axis='y')
+
     # axs[1].legend()
     fig = plt.gcf()
     # axs[1].set_title(phasespace_title_z_Ek)
     pts, labels = axs[1].get_legend_handles_labels()
-    fig.legend(pts, labels, loc='upper center')
+    fig.legend(pts, labels, loc='upper right')
     cbar = fig.colorbar(cf, ax=axs,  # location="right"
                         )
-    logger.info("End plot")
+    # logger.info("End plot")
 
     return old_phasespace_data_z_Ek, t_actual
 
 
 def export_contours_in_folder(
-        fld: fld_parser.FLD, par: par_parser.PAR, et: ExtTool, contour_title: str,  # ' FIELD EX @OSYS$AREA,SHADE-#1'
+        fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, et: ExtTool,
+        contour_title: str,  # ' FIELD EX @OSYS$AREA,SHADE-#1'
+        Ez_title: str,
         res_dir_name,
-        t_end, dt=2e-12,
+        t_end, dt=2e-12, contour_range=[]
 ):
     """
     将contour输出到同一文件夹下
@@ -245,16 +261,18 @@ def export_contours_in_folder(
     os.makedirs(res_dir_name_with_title, exist_ok=True)
     for t in numpy.arange(0, t_end, dt):
         old_pahsespace_data_z_Ek, t_actual = plot_contour_vs_phasespace(
-            fld, par, t,
+            fld, par, grd, t,
             plt.subplots(
                 2, 1, sharex=True,
                 figsize=(16, 9))[1],
             frac,
             geom_picture_path=et.get_name_with_ext(ExtTool.FileType.geom_png),
             # geom_range=[-1.3493e-3, 0, 25.257e-3, 3.9963e-3],
-            old_phasespace_data_z_Ek=old_pahsespace_data_z_Ek, contour_range=[-2e8, 2e8],
-            contour_title=contour_title
+            old_phasespace_data_z_Ek=old_pahsespace_data_z_Ek, contour_range=contour_range,
+            contour_title=contour_title,
+            Ez_title=Ez_title
         )
+        plt.gcf().suptitle(os.path.split(res_dir_name)[1])
         # plt.get_current_fig_manager().window.state('zoomed')
         plt.savefig("%s/%03d_ps.png" % (res_dir_name_with_title, numpy.round(t_actual * 1e12)))
         plt.close()
@@ -271,7 +289,7 @@ def copy_m2d_to_res_folder(res_dir_name, et: ExtTool):
 if __name__ == '__main__':
     plt.ioff()
     filename_no_ext = os.path.splitext(
-        r"F:\MagicFiles\CherenkovAcc\cascade\251keV-04.tlg"
+        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-14.grd"
     )[0]
     et = ExtTool(filename_no_ext)
     fld = fld_parser.FLD(et.get_name_with_ext(ExtTool.FileType.fld))
@@ -291,6 +309,16 @@ if __name__ == '__main__':
     plt.savefig(os.path.join(res_dir_name, '轴上电场.png'))
     plt.close()
     # old_phasespace_data = numpy.array([[0], [0]])
-    export_contours_in_folder(fld, par, et, ' FIELD EZ @OSYS$AREA,SHADE-#1', res_dir_name, t_end, 2e-12)
+    Ez_title = ' FIELD EZ @LINE_AXIS$ #1.1'
+    export_contours_in_folder(fld, par, grd, et, ' FIELD EZ @OSYS$AREA,SHADE-#1', Ez_title,
+                              res_dir_name, t_end, 2e-12,
+                              contour_range=[-1e8, 1e8]
+                              )
+    title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#2'
+    _, Ezmax = get_min_and_max(fld, title_E_abs)
+    export_contours_in_folder(fld, par, grd, et, title_E_abs, Ez_title, res_dir_name, t_end, 2e-12,
+                              contour_range=[0, Ezmax]
+                              )
+
     # logger.info("See result:\n%s" % (res_dir_name))
     pass
