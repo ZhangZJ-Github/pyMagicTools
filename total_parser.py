@@ -24,6 +24,8 @@ import grd_parser
 import par_parser
 from _logging import logger
 
+default_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-14-cahnge_delay-02.geom.png"
+
 
 class ExtTool:
     """
@@ -259,6 +261,9 @@ def export_contours_in_folder(
     plt.ioff()
     res_dir_name_with_title = os.path.join(res_dir_name, validateTitle(contour_title))
     os.makedirs(res_dir_name_with_title, exist_ok=True)
+    geom_path =et.get_name_with_ext(ExtTool.FileType.geom_png)
+    if not os.path.exists(geom_path):
+        geom_path = default_geom_path
     for t in numpy.arange(0, t_end, dt):
         old_pahsespace_data_z_Ek, t_actual = plot_contour_vs_phasespace(
             fld, par, grd, t,
@@ -266,7 +271,7 @@ def export_contours_in_folder(
                 2, 1, sharex=True,
                 figsize=(16, 9))[1],
             frac,
-            geom_picture_path=et.get_name_with_ext(ExtTool.FileType.geom_png),
+            geom_picture_path=geom_path,
             # geom_range=[-1.3493e-3, 0, 25.257e-3, 3.9963e-3],
             old_phasespace_data_z_Ek=old_pahsespace_data_z_Ek, contour_range=contour_range,
             contour_title=contour_title,
@@ -289,7 +294,7 @@ def copy_m2d_to_res_folder(res_dir_name, et: ExtTool):
 if __name__ == '__main__':
     plt.ioff()
     filename_no_ext = os.path.splitext(
-        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-14.grd"
+        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-15.log"
     )[0]
     et = ExtTool(filename_no_ext)
     fld = fld_parser.FLD(et.get_name_with_ext(ExtTool.FileType.fld))

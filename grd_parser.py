@@ -7,11 +7,10 @@
 """
 用于解析MAGIC产生的grd文件
 """
-import enum
 import re
 import time
 from io import StringIO
-from typing import Dict, List
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy
@@ -40,7 +39,6 @@ class GRD(_base.ParserBase):
     n_block_boundaries = 1
     n_block_header = 1
     n_block_grid = 1
-   
 
     # class BoundariesBlock :
     #     """
@@ -64,6 +62,28 @@ class GRD(_base.ParserBase):
         super(GRD, self).__init__(filename)
         self.parse_all_range_datas()
 
+    def parse_all_observes(self):
+        t0 = time.time()
+        raw_obs = self.blocks_groupby_type[self.BlockType.OBSERVE]
+        self.obs = {}
+        for obs_str in raw_obs:
+            line_list = obs_str.splitlines(True)
+            title = line_list[2][:-1]  # Without '\n'
+            # i0 = 131038
+            lines_of_data = int(re.findall(r'ARRAY_\s+([0-9]+)_BY_ ', obs_str)[0])
+            for i in range(min(100, len(line_list))):  # 查找前几行是否有满足要求的数据开头标记（行数）
+                if re.match(r'\s+' + '%d' % lines_of_data + r'\s*\n', line_list[i]):
+                    df = pandas.read_csv(StringIO(''.join(line_list[i + 1:i + 1 + lines_of_data])), sep=r'\s+',
+                                         header=None)
+                    self.obs[title] = {
+                        'data': df,
+                        'describe': line_list[12][:-1],
+                        'location_str': line_list[15][:-1]
+                    }
+                    break
+        from _logging import logger
+        logger.info("解析observe data用时： %.2f" % (time.time() - t0))
+        return self.obs
 
     def parse_all_range_datas(self):
         raw_ranges = self.blocks_groupby_type[self.BlockType.RANGE]
@@ -73,7 +93,7 @@ class GRD(_base.ParserBase):
             title = line_list[2][:-1]  # Without '\n'
             # time_with_unit = re.findall(r" Time [0-9]+.[0-9]+\s+[a-z,A-Z]+", line_list[3040 - 3028])[0][6:].split(" ")
             # t = float(time_with_unit[0]) * frequent_used_unit_to_SI_unit['time'][time_with_unit[1]]
-            t = float(''.join(*re.findall(r' RANGE\s+'+_base.FrequentUsedPatter.float, line_list[1])))
+            t = float(''.join(*re.findall(r' RANGE\s+' + _base.FrequentUsedPatter.float, line_list[1])))
             lines_of_data = int(line_list[3046 - 3028])
             data_str_list = line_list[3047 - 3028:3047 - 3028 + lines_of_data]
 
@@ -88,14 +108,14 @@ class GRD(_base.ParserBase):
             self.ranges[title] = range_of_this_title
         return self.ranges
 
-    def get_data_by_time (self, t, title):
+    def get_data_by_time(self, t, title):
         return _base.find_data_near_t(
             self.ranges[title], t,
             lambda ranges, i: ranges[i]["t"],
             lambda ranges, i: ranges[i]["data"])
 
 
-def plot_EZ_JZ(all_range_data, t, axs: List[plt.Axes]# = plt.subplots(2, 1, sharex=True)[1]
+def plot_EZ_JZ(all_range_data, t, axs: List[plt.Axes]  # = plt.subplots(2, 1, sharex=True)[1]
                ):
     assert len(axs) == 2
     titles = [" FIELD EZ @LINE_AXIS$ #1.1", " FIELD JZ__ELECTRON @LINE_AXIS$ #2.1"]
@@ -104,7 +124,7 @@ def plot_EZ_JZ(all_range_data, t, axs: List[plt.Axes]# = plt.subplots(2, 1, shar
     for i in range(2):
         title = titles[i]
         data_all_time = all_range_data[title]
-        t, data_,_ =_base. find_data_near_t(data_all_time, t)
+        t, data_, _ = _base.find_data_near_t(data_all_time, t)
         # data_.iloc[:, 0] *= 1e3
         axs[i].plot(*(data_.values.T.tolist()), fmts[i], label="t = %.4e" % t)
         axs[i].set_title(titles[i])
@@ -113,8 +133,6 @@ def plot_EZ_JZ(all_range_data, t, axs: List[plt.Axes]# = plt.subplots(2, 1, shar
     plt.ticklabel_format(style='sci', scilimits=(-1, 2), axis='x')
     axs[1].legend()
     # plt.suptitle("t = %.2e" % t)
-
-
 
 
 if __name__ == '__main__':

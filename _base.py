@@ -14,7 +14,7 @@ import numpy
 
 class FrequentUsedPatter:
     # 浮点数，形如+1.5545E+9 1.0
-    float = r'([-+]?[0-9]+\.?[0-9]+)([Ee][-+][0-9]+)?'
+    float = r'([-+]?[0-9]+\.?[0-9]+)([Ee][-+]?[0-9]+)?'
 
 
 frequent_used_unit_to_SI_unit = {
@@ -48,6 +48,7 @@ class ParserBase:
         OBSERVE = 4
         PHASESPACE = 5
         SOLIDFILL = 6
+        VECTOR = 7
         NOT_IMPLEMENT = 1008611
 
     dict_name_to_BlockType: Dict[str, BlockType] = {t.name: t for t in BlockType}
@@ -104,7 +105,7 @@ def find_data_near_t(data_all_time, t, how_to_get_t=lambda data, i: data[i]['t']
     delta_t = numpy.Inf
     for i in range(len(data_all_time)):
         new_delta_t = abs(how_to_get_t(data_all_time, i) - t)
-        if new_delta_t < delta_t:
+        if new_delta_t <  delta_t:
             delta_t = new_delta_t
         else:
             i = max(i - 1, 0)

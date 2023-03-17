@@ -15,7 +15,6 @@ from _logging import logger
 
 
 class FLD(_base.ParserBase):
-
     def __init__(self, filename):
         t = time.time()
 
@@ -25,22 +24,25 @@ class FLD(_base.ParserBase):
         self.field_values_all_t = None
         logger.info("dt = %.2f" % (time.time() - t))
 
-    def get_time(self, i):
+    def get_time(self, i, blocktype: _base.ParserBase.BlockType):
         """
         Get time of the i-th block
-        获取第i个block的时间
+        获取第i个blocktype类的block的时间
         :param i:
         :return:
         """
-        return float(''.join(re.findall(r' SOLIDFILL\s+' + _base.FrequentUsedPatter.float, self.block_list[i])[0]))
+        return float(''.join(
+            re.findall(r' ((SOLIDFILL)|(VECTOR))\s+' + _base.FrequentUsedPatter.float,
+                       self.blocks_groupby_type[blocktype][i])[0][3:]))
 
     def _block_splitter(self, i):
         """
+        目前只适用于SOLIDFILL块
         :param i:
         :return:
         """
-        linelist = self.block_list[i].splitlines(True)
-        t = self.get_time(i)
+        linelist = self.blocks_groupby_type[self.BlockType.SOLIDFILL][i].splitlines(True)
+        t = self.get_time(i, self.BlockType.SOLIDFILL)
         n_x1, n_x2 = (int(s) for s in re.findall(r'ARRAY_\s+([0-9]+)_BY_\s+([0-9]+)_BY_', linelist[8 - 2])[0])
         n_values = n_x1 * n_x2
         n_values_each_line = 5
@@ -86,7 +88,7 @@ class FLD(_base.ParserBase):
         t0 = time.time()
         field_values_all_t = {}
         # Assume x y data are the same all the time
-        for i in range(len(self.block_list)):
+        for i in range(len(self.blocks_groupby_type[self.BlockType.SOLIDFILL])):
             field_values, field_ranges, title, t = self.get_values_by_index(i)
             field_values_of_this_title = field_values_all_t.get(title, [])
             if title not in self.x1x2grid:
