@@ -7,9 +7,10 @@
 # from enum import Enum
 import math
 import re
+import time
 from io import StringIO
 from typing import Dict, List, Union
-
+from _logging import logger
 import pandas
 
 import _base
@@ -18,8 +19,10 @@ import _base
 class PAR(_base.ParserBase):
 
     def __init__(self, filename):
+        t = time.time()
         super(PAR, self).__init__(filename)
         self.parse_all_phase_space_datas()
+        logger.info("PAR(%s)初始化耗时%.2f s"%(filename, time.time() - t))
 
     def parse_all_phase_space_datas(self):
         raw_ranges = self.blocks_groupby_type[self.BlockType.PHASESPACE]

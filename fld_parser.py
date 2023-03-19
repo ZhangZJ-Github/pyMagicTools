@@ -9,20 +9,110 @@ import time
 import typing
 
 import numpy
+import psutil
 
 import _base
 from _logging import logger
 
+logger.info("%s importing..." % __file__)
+
+
+class EzMemManager:
+    """
+    若释放多次都没有明显降低，说明主要内存占用不在于当前程序，因此需要禁用内存释放功能
+    """
+    threshold_percent = 95.
+    cool_down_time = 10  # 两次释放内存的最小间隔，秒
+
+    def __init__(self):
+        self.last_release_time = time.time()
+
+    def release_memory(self, how_to_release: typing.Callable[[], bool]):
+        old_percent = psutil.cpu_percent()
+        t = time.time()
+        if old_percent > self.threshold_percent and t - self.last_release_time > self.cool_down_time:
+            how_to_release()
+            self.last_release_time = t
+
 
 class FLD(_base.ParserBase):
-    def __init__(self, filename):
+    DEFAULT_HEADER_LENGTH = 3000  # 每个block中前几行（包含模拟时间、标题、数据起止行号等摘要信息）的总字符数
+
+    class ContourGenerator:
+        def __init__(self, i, t, title, n_line_x1, n_line_x2, n_line_values, i_x1_start, i_x2_start,
+                     i_field_value_start, n_x1, n_x2):
+            self.i, self.t, self.title, self.n_line_x1, self.n_line_x2, self.n_line_values, self.i_x1_start, self.i_x2_start, self.i_field_value_start, self.n_x1, self.n_x2 = i, t, title, n_line_x1, n_line_x2, n_line_values, i_x1_start, i_x2_start, i_field_value_start, n_x1, n_x2
+            self._linelist: typing.List[str] = None  # 该block的所有行，而非头几行
+            self._x1x2grid: typing.Tuple[numpy.ndarray] = None
+            self._field_value: numpy.ndarray = None
+            self._field_range: typing.List[float] = None
+
+        def release_memory(self):
+            """
+            降低内存占用
+            :return:
+            """
+            self._field_value = None
+
+        def _read_line_list(self,
+                            blocks_grouped_by_block_type: typing.Dict[_base.ParserBase.BlockType, typing.List[str]]):
+            if not self._linelist:
+                self._linelist: typing.List[str] = blocks_grouped_by_block_type[_base.ParserBase.BlockType.SOLIDFILL][
+                    self.i].splitlines(True)
+
+        @staticmethod
+        def _get_data(linelist, i_line_start: int, n_lines: int):
+            return numpy.fromstring(
+                ''.join(linelist[i_line_start:i_line_start + n_lines]),
+                dtype=float,
+                sep=' ')
+
+        def get_x1x2grid(self,
+                         blocks_grouped_by_block_type: typing.Dict[_base.ParserBase.BlockType, typing.List[str]]) -> \
+                typing.Tuple[numpy.ndarray, numpy.ndarray]:
+            if self._x1x2grid is None:
+                self._read_line_list(blocks_grouped_by_block_type)
+                x1, x2 = self._get_data(
+                    self._linelist, self.i_x1_start, self.n_line_x1
+                ), self._get_data(self._linelist, self.i_x2_start, self.n_line_x2)
+                self._x1x2grid: typing.Tuple[numpy.ndarray, numpy.ndarray] = numpy.meshgrid(x1, x2)
+            return self._x1x2grid
+
+        def get_field_values(self,
+                             blocks_grouped_by_block_type: typing.Dict[_base.ParserBase.BlockType, typing.List[str]]):
+            if self._field_value is None:
+                self._read_line_list(blocks_grouped_by_block_type)
+                self._field_value = self._get_data(
+                    self._linelist, self.i_field_value_start, self.n_line_values
+                )
+            return self._field_value
+
+        def get_field_range(self,
+                            blocks_grouped_by_block_type: typing.Dict[_base.ParserBase.BlockType, typing.List[str]]):
+            if self._field_range is None:
+                self._read_line_list(blocks_grouped_by_block_type)
+                self._field_range = [
+                    float(s) for s in re.findall(
+                        r'RANGE\(' + (
+                                (r"\s*(" + _base.FrequentUsedPatter.float
+                                 + ")\s*" + r',\s*') * 2
+                        ) + "(" + _base.FrequentUsedPatter.float + r')\s*\)',
+                        self._linelist[19 - 2])[0][0:-1:3]
+                ]
+            return self._field_range
+
+    def __init__(self, filename: str):
+        logger.info("Start parsing .fld file: %s" % filename)
         t = time.time()
 
         super(FLD, self).__init__(filename)
         # self.x1x2grid = self.build_x1_x2_meshgrid(0)[:2]
         self.x1x2grid: typing.Dict[str, typing.Tuple[numpy.ndarray, numpy.ndarray]] = {}
-        self.field_values_all_t = None
-        logger.info("dt = %.2f" % (time.time() - t))
+        self.all_generator: typing.Dict[
+            str, typing.List] = self.get_all_generators()  # 初始时只包含每个block的摘要信息，在需要时可以据此解析完整数据
+        self.memory_manager = EzMemManager()
+        self.text = None
+        logger.info("FLD初始化用时%.2f s" % (time.time() - t))
 
     def get_time(self, i, blocktype: _base.ParserBase.BlockType):
         """
@@ -32,101 +122,74 @@ class FLD(_base.ParserBase):
         """
         return float(''.join(
             re.findall(r' ((SOLIDFILL)|(VECTOR))\s+' + _base.FrequentUsedPatter.float,
-                       self.blocks_groupby_type[blocktype][i])[0][3:]))
+                       self.blocks_groupby_type[blocktype][i][:FLD.DEFAULT_HEADER_LENGTH])[0][3:]))
 
-    def _block_splitter(self, i,blocktype :_base.ParserBase.BlockType = _base.ParserBase.BlockType.SOLIDFILL):
-        """
-        目前只适用于SOLIDFILL块
-        :param i:
-        :return:
-        """
-        linelist = self.blocks_groupby_type[self.BlockType.SOLIDFILL][i].splitlines(True)
+    def get_block_info(self, i, blocktype: _base.ParserBase.BlockType) -> ContourGenerator:
+        header_linelist = self.blocks_groupby_type[blocktype][i][:FLD.DEFAULT_HEADER_LENGTH].splitlines(True)
         t = self.get_time(i, self.BlockType.SOLIDFILL)
-        n_x1, n_x2 = (int(s) for s in re.findall(r'ARRAY_\s+([0-9]+)_BY_\s+([0-9]+)_BY_', linelist[8 - 2])[0])
+        n_x1, n_x2 = (int(s) for s in re.findall(r'ARRAY_\s+([0-9]+)_BY_\s+([0-9]+)_BY_', header_linelist[8 - 2])[0])
         n_values = n_x1 * n_x2
         n_values_each_line = 5
         n_line_x1, n_line_x2, n_line_values = numpy.ceil(
             numpy.array((n_x1, n_x2, n_values)) / numpy.array(
                 (n_values_each_line,) * 3)).astype(
             int)
-        title = linelist[4 - 2][:-1]  # 不含时间信息的标题
+        title = header_linelist[4 - 2][:-1]  # 不含时间信息的标题
         i_x1_start = 21 - 2
         i_x2_start = i_x1_start + n_line_x1 + 1
         i_field_value_start = i_x2_start + n_line_x2
+        return FLD.ContourGenerator(i, t, title, n_line_x1, n_line_x2, n_line_values, i_x1_start, i_x2_start,
+                                    i_field_value_start, n_x1, n_x2)
 
-        return linelist, t, title, n_line_x1, n_line_x2, n_line_values, i_x1_start, i_x2_start, i_field_value_start, n_x1, n_x2
-    def get_block_info(self, i ,blocktype:_base.ParserBase.BlockType):
-        linelist, t, title, n_line_x1, n_line_x2, n_line_values, i_x1_start, i_x2_start, i_field_value_start, n_x1, n_x2 = self._block_splitter(
-            i)
-
-
-    def get_values_by_index(self, i,blocktype:_base.ParserBase.BlockType=_base.ParserBase.BlockType.SOLIDFILL):
-        linelist, t, title, n_line_x1, n_line_x2, n_line_values, i_x1_start, i_x2_start, i_field_value_start, n_x1, n_x2 = self._block_splitter(
-            i)
-        field_values = self._get_data(linelist, i_field_value_start, n_line_values)
-        field_ranges = [
-            float(s) for s in re.findall(
-                r'RANGE\(' + (
-                        (r"\s*(" + _base.FrequentUsedPatter.float
-                         + ")\s*" + r',\s*') * 2
-                ) + "(" + _base.FrequentUsedPatter.float + r')\s*\)',
-                linelist[19 - 2])[0][0:-1:3]
-        ]
-
-        return field_values, field_ranges, title, t
-
-    def build_x1_x2_meshgrid(self, i):
-        linelist, t, title, n_line_x1, n_line_x2, n_line_values, i_x1_start, i_x2_start, i_field_value_start, n_x1, n_x2 = self._block_splitter(
-            i)
-        x1, x2 = self._get_data(linelist, i_x1_start, n_line_x1), self._get_data(linelist, i_x2_start, n_line_x2)
-        x1v, x2v = numpy.meshgrid(x1, x2)
-        return x1v, x2v, x1, x2, title, t
-
-    @staticmethod
-    def _get_data(linelist, index_of_1st_line, n_lines):
-        return numpy.fromstring(''.join(linelist[index_of_1st_line:index_of_1st_line + n_lines]), dtype=float,
-                                sep=' ')
-
-    def get_all_field_values(self):
+    def get_all_generators(self):
+        logger.info("Start getting all generators")
         t0 = time.time()
-        field_values_all_t = {}
+        all_generators = {}
         # Assume x y data are the same all the time
-        for i in range(len(self.blocks_groupby_type[self.BlockType.SOLIDFILL])):
-            field_values, field_ranges, title, t = self.get_values_by_index(i)
-            field_values_of_this_title = field_values_all_t.get(title, [])
-            if title not in self.x1x2grid:
-                self.x1x2grid[title] = self.build_x1_x2_meshgrid(i)[:2]
+        blktype = self.BlockType.SOLIDFILL
+        for i in range(len(self.blocks_groupby_type[blktype])):
+            contour_data = self.get_block_info(i, blktype)
+            field_values_of_this_title = all_generators.get(contour_data.title, [])
+            if contour_data.title not in self.x1x2grid:
+                self.x1x2grid[contour_data.title] = contour_data.get_x1x2grid(self.blocks_groupby_type)
             try:
                 field_values_of_this_title.append({
-                    "t": t,
-                    "data": {
-                        # "x1s": self.x1x2grid[0],
-                        # "x2s": self.x1x2grid[1],
-                        "field_value": field_values.reshape(self.x1x2grid[title][0].shape),
-                        "field_value_range": field_ranges
-                    }
+                    "t": contour_data.t,
+                    "generator": contour_data
                 })
             except ValueError as e:
                 logger.warn("跳过了一个时间片（i = %d, t = %.2e, title = %s）\n%s" % (
-                    i, t, title, e))
-            field_values_all_t[title] = field_values_of_this_title
-        logger.info("解析所有存储的场数据耗时：%.2f" % (time.time() - t0))
-        return field_values_all_t
+                    i, contour_data.t, contour_data.title, e))
+            all_generators[contour_data.title] = field_values_of_this_title
+        logger.info("获取所有block的基本信息耗时：%.2f" % (time.time() - t0))
+        return all_generators
+
+    def get_generator_by_time(self, t, title=" FIELD EZ @OSYS$AREA,SHADE-#1"):
+        if self.all_generator == None:
+            self.all_generator = self.get_all_generators()
+        t_actual, field_value_generator, i = _base.find_data_near_t(
+            self.all_generator[title], t,
+            lambda generator, j: generator[j]['t'],
+            lambda generator, j: generator[j]["generator"])
+        return t_actual, field_value_generator, i
 
     def get_field_value_by_time(self, t, title=" FIELD EZ @OSYS$AREA,SHADE-#1"):
-        if self.field_values_all_t == None:
-            self.field_values_all_t = self.get_all_field_values()
-        t_actual, field_value, i = _base.find_data_near_t(
-            self.field_values_all_t[title], t,
-            lambda field_values_all_t, j: field_values_all_t[j]['t'],
-            lambda field_values_all_t, j: field_values_all_t[j]["data"][
-                'field_value'])
-        return t_actual, field_value, i
+        t_actual, field_value_generator, i = self.get_generator_by_time(t, title)
+
+        def how_to_release_memory():
+            for each_title in self.all_generator:
+                for j in range(len(self.all_generator[title])):
+                    self.all_generator[each_title][j]['generator'].release_memory()
+            logger.info("释放了一次内存")
+            return True
+
+        self.memory_manager.release_memory(how_to_release_memory)
+        return t_actual, field_value_generator.get_field_values(self.blocks_groupby_type).reshape(
+            self.x1x2grid[title][0].shape), i
 
 
 if __name__ == '__main__':
-    filename = r"F:\MagicFiles\CherenkovAcc\cascade\Coax-2-cascade-higher-gradient-06.fld"
+    filename = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-15-04-add_len.fld"
     fld = FLD(filename)
-    t, field, i = fld.get_field_value_by_time(1e-12)
-
+    t, field, i = fld.get_generator_by_time(1e-12)
     pass

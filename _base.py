@@ -101,7 +101,8 @@ class ParserBase:
             self.blocks_groupby_type[self.get_block_type(blk)].append(blk)
 
 
-def find_data_near_t(data_all_time, t, how_to_get_t=lambda data, i: data[i]['t'],
+def find_data_near_t(data_all_time, t,
+                     how_to_get_t=lambda data, i: data[i]['t'],
                      how_to_get_data=lambda data, i: data[i]['data']):
     """
     :param data_all_time: 按照时间升序排列，data[i]['t']应存在

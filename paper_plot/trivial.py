@@ -7,12 +7,10 @@
 """
 用于论文绘图
 """
-import typing
-
+import numpy
 import pandas
 from sklearn.cluster import KMeans
 
-import _base
 from total_parser import *
 
 
@@ -41,6 +39,7 @@ def cluster(data: pandas.DataFrame, min_mean_dz=1e-3) -> typing.List[pandas.Data
     return [elem[0] for elem in res]
 
 
+
 def contour_zoom(t, fld: fld_parser.FLD, par: par_parser.PAR, geom_picture_path, geom_range, contour_title,
                  phasespace_title_z_r,
                  contour_range, ax: plt.Axes, show_particles=False):
@@ -49,37 +48,32 @@ def contour_zoom(t, fld: fld_parser.FLD, par: par_parser.PAR, geom_picture_path,
 
     logger.info("t_actual of Ez: %.4e" % (t_actual))
     vmin, vmax = contour_range
-
-    # logger.info("Start plot")
-    # 显示轴对称的另一部分
-    x1g, x2g = fld.x1x2grid[contour_title]
-
-    raw_zmin = x1g[0, 0]
-    raw_rmin = 0  # x1g[0, 0]  # 0
-    raw_zmax = x1g[-1, -1]
-    raw_rmax = x2g[-1, -1]
-
-    zmin, rmin, zmax, rmax = geom_range
-    z_factors = (numpy.array([zmin, zmax]) - raw_zmin) / (raw_zmax - raw_zmin)
-    r_factors = (numpy.array([rmin, rmax]) - raw_rmin) / (raw_rmax - raw_rmin)
-    print(z_factors, r_factors)
-    print(slice(*((r_factors * x1g.shape[0]).astype(int))), slice(*((z_factors * x1g.shape[1]).astype(int))))
-    get_zoomed = lambda arr_2d: arr_2d[
-        slice(*((r_factors * x1g.shape[0]).astype(int))), slice(*((z_factors * x1g.shape[1]).astype(int)))]
-    zoomed_x1g = get_zoomed(x1g)
-    zoomed_x2g = get_zoomed(x2g)
-
+    #
+    # # logger.info("Start plot")
+    # # 显示轴对称的另一部分
+    # x1g, x2g = fld.x1x2grid[contour_title]
+    #
+    # raw_zmin = x1g[0, 0]
+    # raw_rmin = 0  # x1g[0, 0]  # 0
+    # raw_zmax = x1g[-1, -1]
+    # raw_rmax = x2g[-1, -1]
+    #
+    # zmin, rmin, zmax, rmax = geom_range
+    # z_factors = (numpy.array([zmin, zmax]) - raw_zmin) / (raw_zmax - raw_zmin)
+    # r_factors = (numpy.array([rmin, rmax]) - raw_rmin) / (raw_rmax - raw_rmin)
+    # print(z_factors, r_factors)
+    # print(slice(*((r_factors * x1g.shape[0]).astype(int))), slice(*((z_factors * x1g.shape[1]).astype(int))))
+    # get_zoomed = lambda arr_2d: arr_2d[
+    #     slice(*((r_factors * x1g.shape[0]).astype(int))), slice(*((z_factors * x1g.shape[1]).astype(int)))]
+    # zoomed_x1g = get_zoomed(x1g)
+    # zoomed_x2g = get_zoomed(x2g)
+    zoomed_x1g, zoomed_x2g, zoomed_field_data, geom_range_ = get_partial_data(geom_range, fld.x1x2grid[contour_title],
+                                                                              field_data, True)
     x1g_sym = numpy.vstack([zoomed_x1g, zoomed_x1g]) * scale_factor
     x2g_sym = numpy.vstack([-zoomed_x2g[::-1], zoomed_x2g]) * scale_factor
-    zoomed_field_data = get_zoomed(field_data)
-
-    img_data = mpimg.imread(geom_picture_path)
-    img_data_sym = numpy.append(img_data, img_data[::-1], axis=0)
-
-    ax.imshow(img_data_sym,  # alpha=0.7,
-              extent=numpy.array((
-                  zmin, zmax, -rmax, rmax
-              )) * scale_factor)  # 显示几何结构
+    geom_range =numpy.array(geom_range_) * scale_factor
+    geom_range[1]= 0
+    plot_geom(geom_picture_path, geom_range, ax, 0, True)
     cf = ax.contourf(
         x1g_sym, x2g_sym, numpy.vstack([zoomed_field_data[::-1], zoomed_field_data]),
         numpy.linspace(vmin, vmax, 50),
@@ -161,11 +155,11 @@ def Ez_vs_zr(t, grd: grd_parser.GRD, par: par_parser.PAR, title_Ez_along_axis, t
     # fig.legend(lines, labels)
 
 
-def plot_Ek_along_z(par: par_parser.PAR, Ek_title, t_start, t_end, ax: plt.Axes, do_cluster = True, min_mean_dz=1e-3):
+def plot_Ek_along_z(par: par_parser.PAR, Ek_title, t_start, t_end, ax: plt.Axes, do_cluster=True, min_mean_dz=1e-3):
     colors = ['r', 'cornflowerblue']
     for each in par.phasespaces[Ek_title]:
         if each['t'] >= t_start and each['t'] <= t_end:
-            datas = cluster(each['data'],min_mean_dz) if do_cluster else  [each['data']]
+            datas = cluster(each['data'], min_mean_dz) if do_cluster else [each['data']]
 
             for i in range(len(datas)):
                 each_bunch = datas[i]
@@ -176,7 +170,6 @@ def plot_Ek_along_z(par: par_parser.PAR, Ek_title, t_start, t_end, ax: plt.Axes,
     # plt.gcf().tight_layout()
 
     ax.grid()
-
 
 
 if __name__ == '__main__':
@@ -223,7 +216,8 @@ if __name__ == '__main__':
     two_axes[1].set_ylabel(r"r ($\mu m$)")
     axs[0].set_xlim(3, 12)
     plt.figure()
-    plot_Ek_along_z(par, ' ALL PARTICLES @AXES(X1,KE)-#3 $$$PLANE_X1_AND_KE_AT_X0=  0.000', -1, 1000.0, plt.gca(),do_cluster=False)
+    plot_Ek_along_z(par, ' ALL PARTICLES @AXES(X1,KE)-#3 $$$PLANE_X1_AND_KE_AT_X0=  0.000', -1, 1000.0, plt.gca(),
+                    do_cluster=False)
     fig, axs = plt.subplots(2, 1, constrained_layout=True)
     plot_observe_data(grd, ' FIELD E1 @PROBE0_2,FFT-#13.1', ' FIELD E1 @PROBE0_2,FFT-#13.2', axs)
     axs[1].set_xlim(0, 2e3)
