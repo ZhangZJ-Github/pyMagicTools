@@ -26,7 +26,6 @@ class FLD(_base.ParserBase):
 
     def get_time(self, i, blocktype: _base.ParserBase.BlockType):
         """
-        Get time of the i-th block
         获取第i个blocktype类的block的时间
         :param i:
         :return:
@@ -35,7 +34,7 @@ class FLD(_base.ParserBase):
             re.findall(r' ((SOLIDFILL)|(VECTOR))\s+' + _base.FrequentUsedPatter.float,
                        self.blocks_groupby_type[blocktype][i])[0][3:]))
 
-    def _block_splitter(self, i):
+    def _block_splitter(self, i,blocktype :_base.ParserBase.BlockType = _base.ParserBase.BlockType.SOLIDFILL):
         """
         目前只适用于SOLIDFILL块
         :param i:
@@ -56,8 +55,12 @@ class FLD(_base.ParserBase):
         i_field_value_start = i_x2_start + n_line_x2
 
         return linelist, t, title, n_line_x1, n_line_x2, n_line_values, i_x1_start, i_x2_start, i_field_value_start, n_x1, n_x2
+    def get_block_info(self, i ,blocktype:_base.ParserBase.BlockType):
+        linelist, t, title, n_line_x1, n_line_x2, n_line_values, i_x1_start, i_x2_start, i_field_value_start, n_x1, n_x2 = self._block_splitter(
+            i)
 
-    def get_values_by_index(self, i):
+
+    def get_values_by_index(self, i,blocktype:_base.ParserBase.BlockType=_base.ParserBase.BlockType.SOLIDFILL):
         linelist, t, title, n_line_x1, n_line_x2, n_line_values, i_x1_start, i_x2_start, i_field_value_start, n_x1, n_x2 = self._block_splitter(
             i)
         field_values = self._get_data(linelist, i_field_value_start, n_line_values)

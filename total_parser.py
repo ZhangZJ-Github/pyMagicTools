@@ -5,8 +5,11 @@
 # @File    : total_parser.py
 # @Software: PyCharm
 import shutil
+import typing
 
 import matplotlib
+
+import _base
 
 matplotlib.use("TkAgg")
 
@@ -55,6 +58,53 @@ def validateTitle(title):
     rstr = r"[\/\\\:\*\?\"\<\>\|]"  # '/ \ : * ? " < > |'
     new_title = re.sub(rstr, "_", title)  # 替换为下划线
     return new_title
+
+
+def plot_geom(geom_path: str, geom_range: typing.Iterable[float], ax):
+    zmin, rmin, zmax, rmax = geom_range
+    img_data = mpimg.imread(geom_path)
+
+    img_data_sym = numpy.append(img_data, img_data[::-1], axis=0)
+
+    ax.imshow(img_data_sym,  # alpha=0.7,
+              extent=numpy.array((
+                  zmin, zmax, -rmax, rmax
+              )))  # 显示几何结构
+
+
+def plot_observe_data(grd, time_domain_data_title, frequency_domain_data_title, axs: typing.Tuple[plt.Axes]):
+    td_data, fd_data = grd.obs[time_domain_data_title]['data'].values, grd.obs[frequency_domain_data_title][
+        'data'].values
+
+    axs[0].plot(td_data[:, 0] * 1e12, td_data[:, 1] / 1e6)
+    axs[0].set_ylabel("$E_z$ (MV/m)")
+    axs[0].set_xlabel("t / ps")
+
+    axs[1].semilogy(fd_data[:, 0], fd_data[:, 1] / 1e6)
+    axs[1].set_ylabel("Magnitude (MV/m/GHz)")
+    axs[1].set_xlabel("frequency / Ghz")
+
+
+def plot_where_is_the_probe(geom_path: str, geom_range, grd, title, ax: plt.Axes):
+    plot_geom(geom_path, geom_range, ax)  # 显示几何结构
+    probe_position = re.findall(_base.FrequentUsedPatter.float + r'(\w+)',
+                                grd.obs[title]['location_str'])
+    length_unit_to_SI_unit_factors = {
+        "m": 1,
+        "cm": 1e-2,
+        "mm": 1e-3,
+        "um": 1e-6
+    }
+    pos = [0, 0]
+    for i in range(len(pos)):
+        pos[i] = float(''.join(probe_position[i][:2])) * length_unit_to_SI_unit_factors[
+            probe_position[i][2]
+        ]
+    plt.scatter(
+        pos[0], pos[1], s=200
+    )
+    logger.info(pos)
+    pass
 
 
 def _par_filtered(particle_data_, particle_frac):
@@ -133,7 +183,7 @@ def get_min_and_max(fld: fld_parser.FLD, contour_title, indexes: slice = None):
 
 def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, t, axs: List[plt.Axes],
                                frac=0.3,
-                               geom_picture_path=r"F:\MagicFiles\CherenkovAcc\cascade\Coax-2-cascade-higher-gradient-06.geom.png",
+                               geom_picture_path=default_geom_path,
                                geom_range=None,  # zmin ,rmin,zmax,rmax
                                old_phasespace_data_z_Ek=numpy.array([[0], [0]]), contour_range=[],
                                contour_title: str = None, phasespace_title_z_Ek: str = None,
@@ -182,7 +232,7 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
                   ])  # 显示几何结构
     cf = axs[0].contourf(
         x1g_sym, x2g_sym, numpy.vstack([field_data[::-1], field_data]),
-        numpy.linspace(vmin, vmax, 10),
+        numpy.linspace(vmin, vmax, 50),
         cmap=plt.get_cmap('jet'),
         alpha=.6, extend='both'
     )
@@ -242,7 +292,7 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
 def export_contours_in_folder(
         fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, et: ExtTool,
         contour_title: str,  # ' FIELD EX @OSYS$AREA,SHADE-#1'
-        Ez_title: str,
+        Ez_title: str, phasespace_title_z_r, phasespace_title_z_Ek,
         res_dir_name,
         t_end, dt=2e-12, contour_range=[]
 ):
@@ -261,7 +311,7 @@ def export_contours_in_folder(
     plt.ioff()
     res_dir_name_with_title = os.path.join(res_dir_name, validateTitle(contour_title))
     os.makedirs(res_dir_name_with_title, exist_ok=True)
-    geom_path =et.get_name_with_ext(ExtTool.FileType.geom_png)
+    geom_path = et.get_name_with_ext(ExtTool.FileType.geom_png)
     if not os.path.exists(geom_path):
         geom_path = default_geom_path
     for t in numpy.arange(0, t_end, dt):
@@ -275,7 +325,7 @@ def export_contours_in_folder(
             # geom_range=[-1.3493e-3, 0, 25.257e-3, 3.9963e-3],
             old_phasespace_data_z_Ek=old_pahsespace_data_z_Ek, contour_range=contour_range,
             contour_title=contour_title,
-            Ez_title=Ez_title
+            Ez_title=Ez_title, phasespace_title_z_r=phasespace_title_z_r, phasespace_title_z_Ek=phasespace_title_z_Ek
         )
         plt.gcf().suptitle(os.path.split(res_dir_name)[1])
         # plt.get_current_fig_manager().window.state('zoomed')
@@ -307,23 +357,25 @@ if __name__ == '__main__':
     t_end = par.phasespaces[tuple(par.phasespaces.keys())[0]][-1]['t']
     fig, axs = plt.subplots(2, 1, sharex=True,
                             figsize=(16, 9))
+    phasespace_title_z_Ek = ' ALL PARTICLES @AXES(X1,KE)-#4 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
+    phasespace_title_z_r = ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
     for t in numpy.arange(0, t_end, 2e-12):
         # for t in [32e-12,36e-12,42e-12,54e-12,64e-12,68e-12,82e-12,108e-12]:
         plot_Ez_with_phasespace(grd, par, t, axs, .3,  # ' FIELD EX @LINE_AXIS$ #1.1',
-                                )
+                                title_phasespace_x1_kE=phasespace_title_z_Ek)
     plt.savefig(os.path.join(res_dir_name, '轴上电场.png'))
     plt.close()
     # old_phasespace_data = numpy.array([[0], [0]])
     Ez_title = ' FIELD EZ @LINE_AXIS$ #1.1'
-    export_contours_in_folder(fld, par, grd, et, ' FIELD EZ @OSYS$AREA,SHADE-#1', Ez_title,
+    export_contours_in_folder(fld, par, grd, et, ' FIELD EZ @OSYS$AREA,SHADE-#1', Ez_title, phasespace_title_z_r,
+                              phasespace_title_z_Ek,
                               res_dir_name, t_end, 2e-12,
                               contour_range=[-1e8, 1e8]
                               )
     title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#2'
     _, Ezmax = get_min_and_max(fld, title_E_abs)
-    export_contours_in_folder(fld, par, grd, et, title_E_abs, Ez_title, res_dir_name, t_end, 2e-12,
+    export_contours_in_folder(fld, par, grd, et, title_E_abs, Ez_title, phasespace_title_z_r, phasespace_title_z_Ek,
+                              res_dir_name, t_end, 2e-12,
                               contour_range=[0, Ezmax]
                               )
-
-    # logger.info("See result:\n%s" % (res_dir_name))
     pass

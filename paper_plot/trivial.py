@@ -16,29 +16,29 @@ import _base
 from total_parser import *
 
 
-def cluster(data: pandas.DataFrame) -> typing.List[pandas.DataFrame]:
+def cluster(data: pandas.DataFrame, min_mean_dz=1e-3) -> typing.List[pandas.DataFrame]:
     """
-
+    :param min_mean_dz: 两个聚类中心的最小值，若两个中心距离比此更小，则认为是同一类
     :param data:
     :return: 聚类中心更小的为第0类
     """
-    min_mean_dz = 2e-3  # 两个聚类中心的最小值，若两个中心距离比此更小，则认为是同一类
+    # min_mean_dz = 1e-3  #
     zs = data[0].values.reshape(-1, 1)
-    data_range =max(zs) - min(zs)
-    if  data_range< min_mean_dz:
-        logger.info("数据范围(%.2e)小于最小类间距(%.2e)，视为1类"%(data_range, min_mean_dz))
+    data_range = max(zs) - min(zs)
+    if data_range < min_mean_dz:
+        logger.info("数据范围(%.2e)小于最小类间距(%.2e)，视为1类" % (data_range, min_mean_dz))
         return [data]
     model = KMeans(2, )
     model.fit(zs)
     if abs(model.cluster_centers_[0] - model.cluster_centers_[1]) < min_mean_dz:
         logger.info("聚类中心距离小于最小类间距，视为1类")
         return [data]
-    clustered_data_and_cluster_center :typing.Dict[typing.Tuple[pandas.DataFrame, float]]= {}
+    clustered_data_and_cluster_center: typing.Dict[typing.Tuple[pandas.DataFrame, float]] = {}
     for label in set(model.labels_):
-        clustered_data_and_cluster_center[label] = data[:, model.labels_ == label], model.cluster_centers_[label]
+        clustered_data_and_cluster_center[label] = data.iloc[model.labels_ == label, :], model.cluster_centers_[label]
     res = list(clustered_data_and_cluster_center.values())
-    res.sort (key=lambda elem : elem[1])
-    return  [elem [0] for elem in res]
+    res.sort(key=lambda elem: elem[1])
+    return [elem[0] for elem in res]
 
 
 def contour_zoom(t, fld: fld_parser.FLD, par: par_parser.PAR, geom_picture_path, geom_range, contour_title,
@@ -161,11 +161,16 @@ def Ez_vs_zr(t, grd: grd_parser.GRD, par: par_parser.PAR, title_Ez_along_axis, t
     # fig.legend(lines, labels)
 
 
-def plot_Ek_along_z(par: par_parser.PAR, Ek_title, t_start, t_end, ax: plt.Axes):
+def plot_Ek_along_z(par: par_parser.PAR, Ek_title, t_start, t_end, ax: plt.Axes, do_cluster = True, min_mean_dz=1e-3):
+    colors = ['r', 'cornflowerblue']
     for each in par.phasespaces[Ek_title]:
         if each['t'] >= t_start and each['t'] <= t_end:
-            ax.plot(each['data'].values[:, 0] * 1e3, each['data'].values[:, 1] / 1e3, '.', markersize=.2,
-                    color='cornflowerblue')
+            datas = cluster(each['data'],min_mean_dz) if do_cluster else  [each['data']]
+
+            for i in range(len(datas)):
+                each_bunch = datas[i]
+                ax.plot(each_bunch[0] * 1e3, each_bunch[1] / 1e3, '.', markersize=.2,
+                        color=colors[i])
     ax.set_ylabel('energy (keV)')
     ax.set_xlabel('z (mm)')
     # plt.gcf().tight_layout()
@@ -173,62 +178,18 @@ def plot_Ek_along_z(par: par_parser.PAR, Ek_title, t_start, t_end, ax: plt.Axes)
     ax.grid()
 
 
-def plot_observe_data(grd, time_domain_data_title, frequency_domain_data_title, axs: typing.Tuple[plt.Axes]):
-    td_data, fd_data = grd.obs[time_domain_data_title]['data'].values, grd.obs[frequency_domain_data_title][
-        'data'].values
-
-    axs[0].plot(td_data[:, 0] * 1e12, td_data[:, 1] * 1e6)
-    axs[0].set_ylabel("$E_z$ (MV/m)")
-    axs[0].set_xlabel("t / ps")
-
-    axs[1].plot(fd_data[:, 0], fd_data[:, 1] / 1e6)
-    axs[1].set_ylabel("Magnitude (MV/m/GHz)")
-    axs[1].set_xlabel("frequency / Ghz")
-
-
-def plot_geom(geom_path: str, geom_range, ax):
-    zmin, rmin, zmax, rmax = geom_range
-    img_data = mpimg.imread(geom_path)
-
-    img_data_sym = numpy.append(img_data, img_data[::-1], axis=0)
-
-    ax.imshow(img_data_sym,  # alpha=0.7,
-              extent=numpy.array((
-                  zmin, zmax, -rmax, rmax
-              )))  # 显示几何结构
-
-
-def plot_where_is_the_probe(geom_path: str, geom_range, grd, title, ax: plt.Axes):
-    plot_geom(geom_path, geom_range, ax)  # 显示几何结构
-    probe_position = re.findall(_base.FrequentUsedPatter.float + r'(\w+)',
-                                grd.obs[title]['location_str'])
-    length_unit_to_SI_unit_factors = {
-        "m": 1,
-        "mm": 1e-3,
-        "um": 1e-6
-    }
-    pos = [0, 0]
-    for i in range(len(pos)):
-        pos[i] = float(''.join(probe_position[i][:2])) * length_unit_to_SI_unit_factors[
-            probe_position[i][2]
-        ]
-    plt.scatter(
-        pos[0], pos[1], s=200
-    )
-    logger.info(pos)
-    pass
-
 
 if __name__ == '__main__':
     outdir = r'D:\MagicFiles\tools\pys\paper_plot\.out'
 
     filename_no_ext = os.path.splitext(
-        r"D:\MagicFiles\CherenkovAcc\cascade\251keV-12-add-probe.toc"
+        r"D:\MagicFiles\CherenkovAcc\cascade\251keV-12-add-probe-02-test_bunch_off.grd"
     )[0]
     et = ExtTool(filename_no_ext)
+    par = par_parser.PAR(et.get_name_with_ext(ExtTool.FileType.par))
+    # a = cluster(par.phasespaces[' ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000'][7]['data'])
     fld = fld_parser.FLD(et.get_name_with_ext(ExtTool.FileType.fld))
     grd = grd_parser.GRD(et.get_name_with_ext(ExtTool.FileType.grd))
-    par = par_parser.PAR(et.get_name_with_ext(ExtTool.FileType.par))
     grd.parse_all_observes()
 
     ts = [4.2e-11, 5.2e-11, 6e-11]
@@ -255,18 +216,18 @@ if __name__ == '__main__':
     for i in range(len(ts)):
         two_axes: typing.Tuple[plt.Axes] = (axs[i], axs[i].twinx())
         Ez_vs_zr(ts[i], grd, par, r' FIELD EZ @LINE_AXIS$ #1.1',
-                 ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000', two_axes)
+                 ' ALL PARTICLES @AXES(X1,X2)-#2 $$$PLANE_X1_AND_X2_AT_X0=  0.000', two_axes)
         two_axes[1].set_ylim(-200, 200)
     two_axes[0].set_xlabel("z (mm)")
     two_axes[0].set_ylabel("$E_z$ (MV/m)")
     two_axes[1].set_ylabel(r"r ($\mu m$)")
     axs[0].set_xlim(3, 12)
     plt.figure()
-    plot_Ek_along_z(par, ' ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000', -1, 1000.0, plt.gca())
+    plot_Ek_along_z(par, ' ALL PARTICLES @AXES(X1,KE)-#3 $$$PLANE_X1_AND_KE_AT_X0=  0.000', -1, 1000.0, plt.gca(),do_cluster=False)
     fig, axs = plt.subplots(2, 1, constrained_layout=True)
-    plot_observe_data(grd, ' FIELD E1 @PROBE1,FFT-#1.1', ' FIELD E1 @PROBE1,FFT-#1.2', axs)
+    plot_observe_data(grd, ' FIELD E1 @PROBE0_2,FFT-#13.1', ' FIELD E1 @PROBE0_2,FFT-#13.2', axs)
     axs[1].set_xlim(0, 2e3)
     plt.figure(constrained_layout=True)
     plot_where_is_the_probe(
-        zoomed_geom_path, zoomed_geom_range, grd, ' FIELD E1 @PROBE1,FFT-#1.1', plt.gca())
+        zoomed_geom_path, zoomed_geom_range, grd, ' FIELD E1 @PROBE0_2,FFT-#13.1', plt.gca())
     plt.show()

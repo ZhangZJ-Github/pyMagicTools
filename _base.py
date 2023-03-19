@@ -11,6 +11,8 @@ from typing import Dict, List
 
 import numpy
 
+from _logging import logger
+
 
 class FrequentUsedPatter:
     # 浮点数，形如+1.5545E+9 1.0
@@ -77,7 +79,11 @@ class ParserBase:
         self.text = ""
         with open(self.filename, 'r') as f:
             self.text = f.read()
+        t1 = time.time()
+        logger.info("将文件%s读入内存（未处理）耗时：%.2f" % (filename, t1 - t))
+
         self.to_blocks()
+        logger.info("%s to blocks耗时：%.2f" % (filename, time.time() - t1))
 
     def to_blocks(self):
         self.block_index_list = []
@@ -105,9 +111,9 @@ def find_data_near_t(data_all_time, t, how_to_get_t=lambda data, i: data[i]['t']
     delta_t = numpy.Inf
     for i in range(len(data_all_time)):
         new_delta_t = abs(how_to_get_t(data_all_time, i) - t)
-        if new_delta_t <  delta_t:
+        if new_delta_t < delta_t:
             delta_t = new_delta_t
         else:
             i = max(i - 1, 0)
             break
-    return how_to_get_t(data_all_time, i), how_to_get_data(data_all_time, i),i
+    return how_to_get_t(data_all_time, i), how_to_get_data(data_all_time, i), i
