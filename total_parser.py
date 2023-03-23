@@ -114,14 +114,15 @@ def get_partial_data(geom_range, x1x2grid: typing.Tuple[numpy.ndarray, numpy.nda
     return zoomed_x1g, zoomed_x2g, zoomed_field_data
 
 
-def plot_observe_data(grd, time_domain_data_title, frequency_domain_data_title, axs: typing.Tuple[plt.Axes]):
+def plot_observe_data(grd, time_domain_data_title, frequency_domain_data_title, axs: typing.Tuple[plt.Axes],
+                      semilogy=False):
     td_data, fd_data = grd.obs[time_domain_data_title]['data'].values, grd.obs[frequency_domain_data_title][
         'data'].values
     axs[0].plot(td_data[:, 0] * 1e12, td_data[:, 1] / 1e6)
     axs[0].set_ylabel("$E_z$ (MV/m)")
     axs[0].set_xlabel("t / ps")
-
-    axs[1].semilogy(fd_data[:, 0], fd_data[:, 1] / 1e6)
+    plot_method = axs[1].semilogy if semilogy else axs[1].plot
+    plot_method(fd_data[:, 0], fd_data[:, 1] / 1e6)
     axs[1].set_ylabel("Magnitude (MV/m/GHz)")
     axs[1].set_xlabel("frequency / Ghz")
 
@@ -403,13 +404,15 @@ def plot_Ez_z_Ek_all_time(grd, par, ts: typing.Iterable[float], fig_path: str,
 
 if __name__ == '__main__':
     filename_no_ext = os.path.splitext(
-        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-15-04-add_len-01.fld"
+        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-15-05-change_algrithom.toc"
     )[0]
     phasespace_title_z_Ek = ' ALL PARTICLES @AXES(X1,KE)-#4 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r = ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
     Ez_title = ' FIELD EZ @LINE_AXIS$ #1.1'
     contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#1'
     contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#2'
+    obs_title_time_domain = ' FIELD E1 @PROBE0_2,FFT-#13.1'
+    obs_title_frequency_domain = ' FIELD E1 @PROBE0_2,FFT-#13.2'
 
     et = ExtTool(filename_no_ext)
     fld = fld_parser.FLD(et.get_name_with_ext(ExtTool.FileType.fld))
@@ -436,3 +439,5 @@ if __name__ == '__main__':
                               res_dir_name, t_end, 2e-12,
                               contour_range=[0, Ezmax]
                               )
+    plot_observe_data(grd, obs_title_time_domain, obs_title_frequency_domain, plt.subplots(2, 1)[1])
+    plt.show()

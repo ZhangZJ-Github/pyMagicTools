@@ -9,6 +9,7 @@
 """
 import re
 import time
+import typing
 from io import StringIO
 from typing import List
 
@@ -17,6 +18,7 @@ import numpy
 import pandas
 
 import _base
+from _logging import logger
 
 frequent_used_unit_to_SI_unit = {
     "time": {
@@ -61,28 +63,30 @@ class GRD(_base.ParserBase):
     def __init__(self, filename):
         super(GRD, self).__init__(filename)
         self.parse_all_range_datas()
+        self.obs: typing.Dict[typing.Dict] = {}
+        self.parse_all_observes()
 
     def parse_all_observes(self):
-        t0 = time.time()
-        raw_obs = self.blocks_groupby_type[self.BlockType.OBSERVE]
-        self.obs = {}
-        for obs_str in raw_obs:
-            line_list = obs_str.splitlines(True)
-            title = line_list[2][:-1]  # Without '\n'
-            # i0 = 131038
-            lines_of_data = int(re.findall(r'ARRAY_\s+([0-9]+)_BY_ ', obs_str)[0])
-            for i in range(min(100, len(line_list))):  # 查找前几行是否有满足要求的数据开头标记（行数）
-                if re.match(r'\s+' + '%d' % lines_of_data + r'\s*\n', line_list[i]):
-                    df = pandas.read_csv(StringIO(''.join(line_list[i + 1:i + 1 + lines_of_data])), sep=r'\s+',
-                                         header=None)
-                    self.obs[title] = {
-                        'data': df,
-                        'describe': line_list[12][:-1],
-                        'location_str': line_list[15][:-1]
-                    }
-                    break
-        from _logging import logger
-        logger.info("解析observe data用时： %.2f" % (time.time() - t0))
+        if not self.obs:
+            t0 = time.time()
+            raw_obs = self.blocks_groupby_type[self.BlockType.OBSERVE]
+            self.obs = {}
+            for obs_str in raw_obs:
+                line_list = obs_str.splitlines(True)
+                title = line_list[2][:-1]  # Without '\n'
+                # i0 = 131038
+                lines_of_data = int(re.findall(r'ARRAY_\s+([0-9]+)_BY_ ', obs_str)[0])
+                for i in range(min(100, len(line_list))):  # 查找前几行是否有满足要求的数据开头标记（行数）
+                    if re.match(r'\s+' + '%d' % lines_of_data + r'\s*\n', line_list[i]):
+                        df = pandas.read_csv(StringIO(''.join(line_list[i + 1:i + 1 + lines_of_data])), sep=r'\s+',
+                                             header=None)
+                        self.obs[title] = {
+                            'data': df,
+                            'describe': line_list[12][:-1],
+                            'location_str': line_list[15][:-1]
+                        }
+                        break
+            logger.info("解析observe data用时： %.2f" % (time.time() - t0))
         return self.obs
 
     def parse_all_range_datas(self):
@@ -94,17 +98,21 @@ class GRD(_base.ParserBase):
             # time_with_unit = re.findall(r" Time [0-9]+.[0-9]+\s+[a-z,A-Z]+", line_list[3040 - 3028])[0][6:].split(" ")
             # t = float(time_with_unit[0]) * frequent_used_unit_to_SI_unit['time'][time_with_unit[1]]
             t = float(''.join(*re.findall(r' RANGE\s+' + _base.FrequentUsedPatter.float, line_list[1])))
-            lines_of_data = int(line_list[3046 - 3028])
-            data_str_list = line_list[3047 - 3028:3047 - 3028 + lines_of_data]
-
-            df = pandas.read_csv(StringIO("".join(data_str_list)), sep=r"\s+", header=None)
+            lines_of_data = int(re.findall(r'ARRAY_\s+([0-9]+)_BY_ ', rangestr)[0])
             range_of_this_title = self.ranges.get(title, [])
-            range_of_this_title.append(
-                {
-                    "t": t,
-                    "data": df
-                }
-            )
+            for i in range(min(100, len(line_list))):  # 查找前几行是否有满足要求的数据开头标记（行数）
+                if re.match(r'\s+' + '%d' % lines_of_data + r'\s*\n', line_list[i]):
+                    df = pandas.read_csv(StringIO(''.join(line_list[i + 1:i + 1 + lines_of_data])), sep=r'\s+',
+                                         header=None)
+
+                    range_of_this_title.append(
+                        {
+                            "t": t,
+                            "data": df
+                        }
+                    )
+                    break
+
             self.ranges[title] = range_of_this_title
         return self.ranges
 
@@ -136,7 +144,9 @@ def plot_EZ_JZ(all_range_data, t, axs: List[plt.Axes]  # = plt.subplots(2, 1, sh
 
 
 if __name__ == '__main__':
-    filename = r"F:\MagicFiles\CherenkovAcc\cascade\Coax-2-cascade-higher-gradient-04.grd"
+    # filename = r"F:\MagicFiles\CherenkovAcc\cascade\Coax-2-cascade-higher-gradient-04.grd"
+    filename = r'F:\Tecent\MyData\WeChat Files\wxid_7252352519612\FileStorage\File\2023-03\ERDUAN(1).grd'
+
     grd = GRD(filename)
     grd.get_block_type(grd.block_list[-1])
     rangedata = grd.parse_all_range_datas()
