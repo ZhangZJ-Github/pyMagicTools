@@ -125,6 +125,8 @@ def plot_observe_data(grd, time_domain_data_title, frequency_domain_data_title, 
     plot_method(fd_data[:, 0], fd_data[:, 1] / 1e6)
     axs[1].set_ylabel("Magnitude (MV/m/GHz)")
     axs[1].set_xlabel("frequency / Ghz")
+    print(grd.obs[time_domain_data_title]['location_str'])
+    print(grd.obs[time_domain_data_title]['describe'])
 
 
 def plot_where_is_the_probe(geom_path: str, geom_range, grd, title, ax: plt.Axes):
@@ -238,10 +240,6 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
         vmin, vmax = -_, _
     else:
         vmin, vmax = contour_range
-    t_actual_z_Ek, phasespace_z_Ek_data, _ = par.get_data_by_time(t_actual, phasespace_title_z_Ek)
-    t_actual_z_r, phase_space_data_z_r, _ = par.get_data_by_time(t_actual, phasespace_title_z_r)
-    logger.info(
-        "t_actual of field value: %.4e s, of z-Ek: %.4e s, of z-r: %.4e s" % (t_actual, t_actual_z_Ek, t_actual_z_r))
 
     # logger.info("Start plot")
     # 显示轴对称的另一部分
@@ -266,32 +264,45 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
         cmap=plt.get_cmap('jet'),
         alpha=.7, extend='both'
     )
+    axs[0].set_aspect('equal',  # 'box'
+                      )
     # if (not geom_picture_path) or (not os.path.exists(geom_picture_path)):
     #     geom_picture_path = default_geom_path
     #     plot_geom(geom_picture_path, geom_range, axs[0], 1, True)
 
     # cf = axs[0].contourf(*fld.x1x2grid, field_data,cmap=plt.get_cmap('coolwarm'),  # numpy.linspace(-1e6, 1e6, 10)
     #                      )
-    phase_space_data_z_r = phase_space_data_z_r.values
-    phase_space_data_z_r_bottom_side = phase_space_data_z_r.copy()
-    phase_space_data_z_r_bottom_side[:, 1] *= -1
-    phase_space_data_z_r = numpy.vstack([phase_space_data_z_r, phase_space_data_z_r_bottom_side])
-    axs[0].scatter(*phase_space_data_z_r.T, c='w', s=1,
-                   )
-    axs[0].set_aspect('equal',  # 'box'
-                      )
-    # axs[0].set_title(contour_title)
-    # fig :plt.Figure= plt.figure()
-    # grid_spec = plt.GridSpec(2,10,wspace=0.5,hspace=0.5)
-    # axs[0] = fig.add_subplot
-    axs[1].scatter(*old_phasespace_data_z_Ek[:, 1:], s=.3,
-                   label="old data")
+    ax_for_Ez: plt.Axes = axs[1].twinx()
+    if par is not None:
+        t_actual_z_Ek, phasespace_z_Ek_data, _ = par.get_data_by_time(t_actual, phasespace_title_z_Ek)
+        t_actual_z_r, phase_space_data_z_r, _ = par.get_data_by_time(t_actual, phasespace_title_z_r)
+        logger.info(
+            "t_actual of field value: %.4e s, of z-Ek: %.4e s, of z-r: %.4e s" % (
+                t_actual, t_actual_z_Ek, t_actual_z_r))
+        phase_space_data_z_r = phase_space_data_z_r.values
+        phase_space_data_z_r_bottom_side = phase_space_data_z_r.copy()
+        phase_space_data_z_r_bottom_side[:, 1] *= -1
+        phase_space_data_z_r = numpy.vstack([phase_space_data_z_r, phase_space_data_z_r_bottom_side])
+        axs[0].scatter(*phase_space_data_z_r.T, c='w', s=1,
+                       )
 
-    new_phasespace_z_Ek_data = phasespace_z_Ek_data.values.T
-    # for each_phasespace_data_z_Ek in old_phasespace_data_z_Ek:
-    axs[1].scatter(*new_phasespace_z_Ek_data, s=.3,
-                   label="t = %.4e s" % t_actual)
-    old_phasespace_data_z_Ek = numpy.hstack([old_phasespace_data_z_Ek, new_phasespace_z_Ek_data])
+        # axs[0].set_title(contour_title)
+        # fig :plt.Figure= plt.figure()
+        # grid_spec = plt.GridSpec(2,10,wspace=0.5,hspace=0.5)
+        # axs[0] = fig.add_subplot
+        axs[1].scatter(*old_phasespace_data_z_Ek[:, 1:], s=.3,
+                       label="old data")
+
+        new_phasespace_z_Ek_data = phasespace_z_Ek_data.values.T
+        # for each_phasespace_data_z_Ek in old_phasespace_data_z_Ek:
+        axs[1].scatter(*new_phasespace_z_Ek_data, s=.3,
+                       label="t = %.4e s" % t_actual)
+        old_phasespace_data_z_Ek = numpy.hstack([old_phasespace_data_z_Ek, new_phasespace_z_Ek_data])
+        particle_zs = new_phasespace_z_Ek_data[0]
+        mid_z = (particle_zs.min() + particle_zs.max()) / 2
+        ax_for_Ez.axvline(mid_z, alpha=.3)
+        if mid_z > 1e2:
+            logger.warning("particle_zs.min(), particle_zs.max() = %.2e,%.2e" % (particle_zs.min(), particle_zs.max()))
     for ax in axs:
         ax.ticklabel_format(style='sci', scilimits=(-1, 2), axis='x')
         ax.ticklabel_format(style='sci', scilimits=(-1, 2), axis='y')
@@ -299,13 +310,8 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
     axs[0].set_ylabel("r / m")
     axs[1].set_xlabel('z / m')
     axs[1].set_ylabel('energy of particle / eV')
-    ax_for_Ez: plt.Axes = axs[1].twinx()
+
     t_Ez, Ez_data, _ = grd.get_data_by_time(t_actual, Ez_title)
-    particle_zs = new_phasespace_z_Ek_data[0]
-    mid_z = (particle_zs.min() + particle_zs.max()) / 2
-    ax_for_Ez.axvline(mid_z, alpha=.3)
-    if mid_z > 1e2:
-        logger.warning("particle_zs.min(), particle_zs.max() = %.2e,%.2e" % (particle_zs.min(), particle_zs.max()))
 
     axs[0].set_xlim(geom_range[0], geom_range[2])
     axs[0].set_ylim(-geom_range[3], geom_range[3])
@@ -320,8 +326,8 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
     fig = plt.gcf()
     # axs[1].set_title(phasespace_title_z_Ek)
     pts, labels = axs[1].get_legend_handles_labels()
-    fig.legend(pts, labels, loc='upper right')
-    cbar = fig.colorbar(cf, ax=axs,  # location="right"
+    fig.legend(pts, labels, loc='lower right')
+    cbar = fig.colorbar(cf, ax=axs,  # location=""
                         )
     # logger.info("End plot")
 
@@ -404,15 +410,15 @@ def plot_Ez_z_Ek_all_time(grd, par, ts: typing.Iterable[float], fig_path: str,
 
 if __name__ == '__main__':
     filename_no_ext = os.path.splitext(
-        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-15-05-change_algrithom.toc"
+        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-15-05-change_algrithom.m2d"
     )[0]
     phasespace_title_z_Ek = ' ALL PARTICLES @AXES(X1,KE)-#4 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r = ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
     Ez_title = ' FIELD EZ @LINE_AXIS$ #1.1'
     contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#1'
     contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#2'
-    obs_title_time_domain = ' FIELD E1 @PROBE0_2,FFT-#13.1'
-    obs_title_frequency_domain = ' FIELD E1 @PROBE0_2,FFT-#13.2'
+    obs_title_time_domain = ' FIELD E1 @PROBE0_1,FFT-#7.1'
+    obs_title_frequency_domain = ' FIELD E1 @PROBE0_1,FFT-#7.2'
 
     et = ExtTool(filename_no_ext)
     fld = fld_parser.FLD(et.get_name_with_ext(ExtTool.FileType.fld))
@@ -422,7 +428,7 @@ if __name__ == '__main__':
     res_dir_name = "%s/.out/%s" % (os.path.split(et.filename_no_ext))
     os.makedirs(res_dir_name, exist_ok=True)
     copy_m2d_to_res_folder(res_dir_name, et)
-    t_end = par.phasespaces[tuple(par.phasespaces.keys())[0]][-1]['t']
+    t_end = grd.ranges[tuple(grd.ranges.keys())[0]][-1]['t']
 
     plot_Ez_z_Ek_all_time(grd, par, numpy.arange(0, t_end, 2e-12),
                           os.path.join(res_dir_name, '轴上电场.png'),
@@ -439,5 +445,8 @@ if __name__ == '__main__':
                               res_dir_name, t_end, 2e-12,
                               contour_range=[0, Ezmax]
                               )
+    Z, R = fld.x1x2grid[contour_title_E_abs]
+    plot_where_is_the_probe(et.get_name_with_ext(et.FileType.geom_png), [Z[0, 0], 0, Z[-1, -1], R[-1, -1]], grd,
+                            obs_title_time_domain, plt.subplots()[1])
     plot_observe_data(grd, obs_title_time_domain, obs_title_frequency_domain, plt.subplots(2, 1)[1])
     plt.show()
