@@ -51,6 +51,7 @@ class ParserBase:
         PHASESPACE = 5
         SOLIDFILL = 6
         VECTOR = 7
+        FLUX = 8
         NOT_IMPLEMENT = 1008611
 
     dict_name_to_BlockType: Dict[str, BlockType] = {t.name: t for t in BlockType}

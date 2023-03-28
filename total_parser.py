@@ -27,38 +27,9 @@ import fld_parser
 import grd_parser
 import par_parser
 from _logging import logger
+from filenametool import ExtTool, validateTitle
 
 default_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-14-cahnge_delay-02.geom.png"
-
-
-class ExtTool:
-    """
-    Magic常见结果文件的后缀
-    """
-
-    class FileType(enum.Enum):
-        par = ".par"
-        fld = ".fld"
-        grd = ".grd"
-        m2d = ".m2d"
-        geom_png = '.geom.png'  # 手动截图的建议后缀
-
-    def __init__(self, filename_no_ext):
-        self.filename_no_ext = filename_no_ext
-
-    def get_name_with_ext(self, ext: enum.Enum):
-        return self.filename_no_ext + ext.value
-
-
-def validateTitle(title):
-    """
-    将文本替换为合法的文件夹名字
-    :param title:
-    :return:
-    """
-    rstr = r"[\/\\\:\*\?\"\<\>\|]"  # '/ \ : * ? " < > |'
-    new_title = re.sub(rstr, "_", title)  # 替换为下划线
-    return new_title
 
 
 def plot_geom(geom_path: str, geom_range: typing.Iterable[float], ax, alpha=.7, axial_symetry=True):
