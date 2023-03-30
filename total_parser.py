@@ -12,10 +12,8 @@ import matplotlib
 
 import _base
 
-
 matplotlib.use("TkAgg")
 
-import enum
 import os.path
 from typing import List
 
@@ -29,8 +27,9 @@ import grd_parser
 import par_parser
 from _logging import logger
 from filenametool import ExtTool, validateTitle
+from sympy.physics import units
 
-default_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-14-cahnge_delay-02.geom.png"
+default_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.geom.png"
 
 
 def plot_geom(geom_path: str, geom_range: typing.Iterable[float], ax, alpha=.7, axial_symetry=True):
@@ -57,8 +56,9 @@ def plot_geom(geom_path: str, geom_range: typing.Iterable[float], ax, alpha=.7, 
               )))  # 显示几何结构
 
 
-def get_partial_data(geom_range, x1x2grid: typing.Tuple[numpy.ndarray, numpy.ndarray], field_value: numpy.ndarray,
-                     force_rmin_to_zero=True):
+def get_partial_data(geom_range, x1x2grid: typing.Tuple[numpy.ndarray, numpy.ndarray],
+                     field_value: typing.List[numpy.ndarray],
+                     force_rmin_to_zero=True, n_components=1):
     """
     获取x1x2grid和field_value中位于geom_range中的那部分数据
     :param geom_range:
@@ -82,7 +82,9 @@ def get_partial_data(geom_range, x1x2grid: typing.Tuple[numpy.ndarray, numpy.nda
             *((z_factors * x1g.shape[1] + numpy.array((0, 1))).astype(int)))]
     zoomed_x1g = get_zoomed_2d(x1g)
     zoomed_x2g = get_zoomed_2d(x2g)
-    zoomed_field_data = get_zoomed_2d(field_value)
+    zoomed_field_data = [None] * 2
+    for i in range(n_components):
+        zoomed_field_data[i] = get_zoomed_2d(field_value[i])
     return zoomed_x1g, zoomed_x2g, zoomed_field_data
 
 
@@ -105,12 +107,7 @@ def plot_where_is_the_probe(geom_path: str, geom_range, grd, title, ax: plt.Axes
     plot_geom(geom_path, geom_range, ax)  # 显示几何结构
     probe_position = re.findall(_base.FrequentUsedPatter.float + r'(\w+)',
                                 grd.obs[title]['location_str'])
-    length_unit_to_SI_unit_factors = {
-        "m": 1,
-        "cm": 1e-2,
-        "mm": 1e-3,
-        "um": 1e-6
-    }
+    length_unit_to_SI_unit_factors = _base.uc
     pos = [0, 0]
     for i in range(len(pos)):
         pos[i] = float(''.join(probe_position[i][:2])) * length_unit_to_SI_unit_factors[
@@ -202,7 +199,8 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
                                phasespace_title_z_Ek: str = " ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000",
                                phasespace_title_z_r: str = " ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000",
                                Ez_title=None, ):
-    t_actual, field_data, i = fld.get_field_value_by_time(t, contour_title)
+    t_actual, field_data_, i = fld.get_field_value_by_time(t, contour_title)
+    field_data = field_data_[0]
     # field_data = generator.get_field_values(fld.blocks_groupby_type)
     logger.info("t_actual of Ez: %.4e" % (t_actual))
 
@@ -218,8 +216,9 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
     x1g, x2g = fld.x1x2grid[contour_title]
     if not geom_range:
         geom_range = [x1g[0, 0], 0, x1g[-1, -1], x2g[-1, -1]]
-    zoomed_x1g, zoomed_x2g, zoomed_field_data = get_partial_data(
+    zoomed_x1g, zoomed_x2g, zoomed_field_data_ = get_partial_data(
         geom_range, fld.x1x2grid[contour_title], field_data, True)
+    zoomed_field_data = zoomed_field_data_[0]
     x1g_sym = numpy.vstack([zoomed_x1g, zoomed_x1g])
     x2g_sym = numpy.vstack([-zoomed_x2g[::-1], zoomed_x2g])
 
@@ -231,7 +230,7 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
     logger.info("Geom range %s" % (geom_range))
 
     cf = axs[0].contourf(
-        x1g_sym, x2g_sym, numpy.vstack([field_data[::-1], field_data]),
+        x1g_sym, x2g_sym, numpy.vstack([zoomed_field_data[::-1], zoomed_field_data]),
         numpy.linspace(vmin, vmax, 50),
         cmap=plt.get_cmap('jet'),
         alpha=.7, extend='both'
@@ -380,9 +379,43 @@ def plot_Ez_z_Ek_all_time(grd, par, ts: typing.Iterable[float], fig_path: str,
     logger.info("close用时%.2f" % (time.time() - t2))
 
 
+def get_sym(x1g_partial, x2g_partial, data_partial: typing.List[numpy.ndarray],
+            symmetry_factors):
+    assert len(symmetry_factors) == len(data_partial)
+    x1g_sym = numpy.vstack([x1g_partial, x1g_partial])
+    x2g_sym = numpy.vstack([-x2g_partial[::-1], x2g_partial])
+    data_sym: typing.List[numpy.ndarray] = [None] * 2
+    for i in range(len(symmetry_factors)):
+        data_sym[i] = numpy.vstack([symmetry_factors[i] * data_partial[i][::-1], data_partial[i]])
+    return x1g_sym, x2g_sym, data_sym
+
+
+def plot_vector(t, fld: fld_parser.FLD, par: par_parser.PAR, vector_title, phase_space_zr_title: str, ax: plt.Axes,
+                length_unit: units.quantities.Quantity):
+    t_actual, data, i_ = fld.get_field_value_by_time(t, vector_title)
+    x1g, x2g = fld.x1x2grid[vector_title]
+    x1g_partial, x2g_partial, data_partial = x1g, x2g, data  # get_partial_data([6e-3, 0, 10e-3, 0.0005], (x1g, x2g), data, False, 2)
+    x1g_sym, x2g_sym, data_sym = get_sym(x1g_partial, x2g_partial, data_partial, [1, -1])
+
+    ax.quiver(x1g_sym / length_unit.scale_factor, x2g_sym / length_unit.scale_factor, *data_sym,
+              # scale =1e-9
+              )
+
+    t_zr, zr_data, i_zr = par.get_data_by_time(t, phase_space_zr_title)
+    logger.info("t_vector = %.2e, t_zr = %.2e" % (t_actual, t_zr))
+    zr_bottom = zr_data.copy()
+    zr_bottom[1] *=-1
+    zr_data_sym = numpy.vstack([zr_data.values,zr_bottom.values])
+    ax.scatter(*(zr_data_sym.T / length_unit.scale_factor),s= .3 )
+    ax.set_aspect('equal')
+    ax.set_xlabel('z / %s' % length_unit.abbrev)
+    ax.set_ylabel('r / %s' % length_unit.abbrev)
+    ax.set_title("%.2f ps"%(t/1e-12))
+
+
 if __name__ == '__main__':
     filename_no_ext = os.path.splitext(
-        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\3MeV.grd"
+        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.tlg"
     )[0]
     phasespace_title_z_Ek = ' ALL PARTICLES @AXES(X1,KE)-#4 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r = ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
@@ -390,7 +423,7 @@ if __name__ == '__main__':
     contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#1'
     contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#2'
     obs_title_time_domain = ' FIELD E1 @PROBE0_3,FFT-#7.1'
-    obs_title_frequency_domain =' FIELD E1 @PROBE0_3,FFT-#7.2'
+    obs_title_frequency_domain = ' FIELD E1 @PROBE0_3,FFT-#7.2'
 
     et = ExtTool(filename_no_ext)
     fld = fld_parser.FLD(et.get_name_with_ext(ExtTool.FileType.fld))
@@ -402,26 +435,31 @@ if __name__ == '__main__':
     copy_m2d_to_res_folder(res_dir_name, et)
     t_end = grd.ranges[tuple(grd.ranges.keys())[0]][-1]['t']
 
-    plot_Ez_z_Ek_all_time(grd, par, numpy.arange(0, t_end, 2e-12),
-                          os.path.join(res_dir_name, '轴上电场.png'),
-                          Ez_title, phasespace_title_z_Ek)
+    # plot_Ez_z_Ek_all_time(grd, par, numpy.arange(0, t_end, 2e-12),
+    #                       os.path.join(res_dir_name, '轴上电场.png'),
+    #                       Ez_title, phasespace_title_z_Ek)
+    #
+    # export_contours_in_folder(fld, par, grd, et, contour_title_Ez, Ez_title, phasespace_title_z_r,
+    #                           phasespace_title_z_Ek,
+    #                           res_dir_name, t_end, 2e-12,
+    #                           contour_range=[-1e8, 1e8]
+    #                           )
+    # _, Ezmax = get_min_and_max(fld, contour_title_E_abs)
+    # export_contours_in_folder(fld, par, grd, et, contour_title_E_abs, Ez_title, phasespace_title_z_r,
+    #                           phasespace_title_z_Ek,
+    #                           res_dir_name, t_end, 2e-12,
+    #                           contour_range=[0, Ezmax]
+    #                           )
+    # Z, R = fld.x1x2grid[contour_title_E_abs]
+    # plot_where_is_the_probe(et.get_name_with_ext(et.FileType.geom_png), [Z[0, 0], 0, Z[-1, -1], R[-1, -1]], grd,
+    #                         obs_title_time_domain, plt.subplots(constrained_layout=True)[1])
+    # plt.gcf().savefig(os.path.join(res_dir_name, 'probe_loc.svg'))
+    # plot_observe_data(grd, obs_title_time_domain, obs_title_frequency_domain,
+    #                   plt.subplots(2, 1, constrained_layout=True)[1])
+    # plt.gcf().savefig(os.path.join(res_dir_name, 'td_fd.svg'))
+    phasespace_title_z_r_test_bunch = ' TEST_ELECTRON @AXES(X1,X2)-#2 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
+    plot_vector(4.7930e-11, fld, par, ' FIELD E(X1,X2) @CHANNEL1-#1', phasespace_title_z_r_test_bunch,
+                plt.subplots(constrained_layout=True)[1], units.mm)
 
-    export_contours_in_folder(fld, par, grd, et, contour_title_Ez, Ez_title, phasespace_title_z_r,
-                              phasespace_title_z_Ek,
-                              res_dir_name, t_end, 2e-12,
-                              contour_range=[-1e8, 1e8]
-                              )
-    _, Ezmax = get_min_and_max(fld, contour_title_E_abs)
-    export_contours_in_folder(fld, par, grd, et, contour_title_E_abs, Ez_title, phasespace_title_z_r,
-                              phasespace_title_z_Ek,
-                              res_dir_name, t_end, 2e-12,
-                              contour_range=[0, Ezmax]
-                              )
-    Z, R = fld.x1x2grid[contour_title_E_abs]
-    plot_where_is_the_probe(et.get_name_with_ext(et.FileType.geom_png), [Z[0, 0], 0, Z[-1, -1], R[-1, -1]], grd,
-                            obs_title_time_domain, plt.subplots(constrained_layout=True)[1])
-    plt.gcf().savefig(os.path.join (res_dir_name,'probe_loc.svg'))
-    plot_observe_data(grd, obs_title_time_domain, obs_title_frequency_domain, plt.subplots(2, 1,constrained_layout=True)[1])
-    plt.gcf().savefig(os.path.join (res_dir_name,'td_fd.svg'))
 
     plt.show()

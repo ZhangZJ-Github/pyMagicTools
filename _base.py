@@ -119,3 +119,13 @@ def find_data_near_t(data_all_time, t,
             i = max(i - 1, 0)
             break
     return how_to_get_t(data_all_time, i), how_to_get_data(data_all_time, i), i
+from  sympy.physics import units
+class UnitConvertor :
+    def __init__(self):
+        self.length_unit_to_SI_unit_factors =       {
+        "m": 1,
+        "cm": 1e-2,
+        "mm": 1e-3,
+        "um": 1e-6
+    }
+uc = UnitConvertor()
