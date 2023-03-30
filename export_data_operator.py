@@ -62,6 +62,9 @@ class TimeModifierBase(_base.ParserBase):
                               # "%.7e" % (new_t),  # lines[1],
                               re.sub("%d" % (i + 1), new_index, lines[1], 1),
                               1)
+            if (''.join(lines) + block[self.DEFAULT_N_CHAR:] ).startswith(r''' $DMP$DMP$DMP$DMPSTARTBLOCK               1      
+ FLUX               0.3433500E-11 54620E-10     9434  37'''):#j+1 == 546 and blocktype == _base.ParserBase.BlockType.FLUX:#lines[1] .startswith( ' FLUX               0.3433500E-11 54620E-10     9434  37'):
+                raise RuntimeError
             j += 1
             blocks[i] = ''.join(lines) + block[self.DEFAULT_N_CHAR:]
         blocks = blocks[start_i:]
@@ -72,13 +75,13 @@ class TimeModifierBase(_base.ParserBase):
 
 
 if __name__ == '__main__':
-    filename = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23-exported.grd"
+    filename = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_export_and_import\test_export2_.grd"
     filename_no_ext = os.path.splitext(filename)[0]
     et = filenametool.ExtTool(filename_no_ext)
     grd = TimeModifierBase(filename)
     par = TimeModifierBase(et.get_name_with_ext(et.FileType.par))
-    suffix = "_-240ps"
-    delta_t = -240e-12 - 0.1400000E-14 + 0.6284569E-14  # - 3.9000000e-15 + 0.6284569E-14
+    suffix = "_-trim"
+    delta_t = -56e-12 - .7e-15  # - 4.8000000e-15 + 0.6300000E-14
     grd.time_shift(delta_t, filename_no_ext + suffix + ".grd", grd.BlockType.RANGE)
     par.time_shift(delta_t, filename_no_ext + suffix + ".par", grd.BlockType.FLUX)
 

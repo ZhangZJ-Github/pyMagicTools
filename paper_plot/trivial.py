@@ -7,7 +7,6 @@
 """
 用于论文绘图
 """
-import numpy
 import pandas
 from sklearn.cluster import KMeans
 
@@ -39,7 +38,6 @@ def cluster(data: pandas.DataFrame, min_mean_dz=1e-3) -> typing.List[pandas.Data
     return [elem[0] for elem in res]
 
 
-
 def contour_zoom(t, fld: fld_parser.FLD, par: par_parser.PAR, geom_picture_path, geom_range, contour_title,
                  phasespace_title_z_r,
                  contour_range, ax: plt.Axes, show_particles=False):
@@ -67,19 +65,20 @@ def contour_zoom(t, fld: fld_parser.FLD, par: par_parser.PAR, geom_picture_path,
     #     slice(*((r_factors * x1g.shape[0]).astype(int))), slice(*((z_factors * x1g.shape[1]).astype(int)))]
     # zoomed_x1g = get_zoomed(x1g)
     # zoomed_x2g = get_zoomed(x2g)
-    zoomed_x1g, zoomed_x2g, zoomed_field_data, geom_range_ = get_partial_data(geom_range, fld.x1x2grid[contour_title],
-                                                                              field_data, True)
+    zoomed_x1g, zoomed_x2g, zoomed_field_data = get_partial_data(geom_range, fld.x1x2grid[contour_title],
+                                                                 field_data, True)
     x1g_sym = numpy.vstack([zoomed_x1g, zoomed_x1g]) * scale_factor
     x2g_sym = numpy.vstack([-zoomed_x2g[::-1], zoomed_x2g]) * scale_factor
-    geom_range =numpy.array(geom_range_) * scale_factor
-    geom_range[1]= 0
-    plot_geom(geom_picture_path, geom_range, ax, 0, True)
+    geom_range = numpy.array(geom_range) * scale_factor
+    geom_range[1] = 0
+    plot_geom(geom_picture_path, geom_range, ax, 1, True)
     cf = ax.contourf(
         x1g_sym, x2g_sym, numpy.vstack([zoomed_field_data[::-1], zoomed_field_data]),
         numpy.linspace(vmin, vmax, 50),
         cmap=plt.get_cmap('jet'),
         alpha=.6, extend='both'
     )
+    ax.axis('off')
 
     # cf = axs[0].contourf(*fld.x1x2grid, field_data,cmap=plt.get_cmap('coolwarm'),  # numpy.linspace(-1e6, 1e6, 10)
     #                      )
@@ -144,7 +143,7 @@ def Ez_vs_zr(t, grd: grd_parser.GRD, par: par_parser.PAR, title_Ez_along_axis, t
     #
     # two_axes[1].set_ylabel(r"r ($\mu m$)")
     zs = datas[1].values[:, 0] * 1e3
-    two_axes[1].axvspan(*(zs.min(), zs.max()), alpha=0.3)
+    two_axes[1].axvline((zs.min() + zs.max()) / 2, alpha=0.3)
     two_axes[0].legend(
         # loc='upper left'
     )
@@ -176,8 +175,10 @@ if __name__ == '__main__':
     outdir = r'D:\MagicFiles\tools\pys\paper_plot\.out'
 
     filename_no_ext = os.path.splitext(
-        r"D:\MagicFiles\CherenkovAcc\cascade\251keV-12-add-probe-02-test_bunch_off.grd"
+        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.toc"
     )[0]
+    phasespace_title_z_Ek = ' TEST_ELECTRON @AXES(X1,KE)-#5 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
+    phasespace_title_z_r = ' TEST_ELECTRON @AXES(X1,X2)-#2 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
     et = ExtTool(filename_no_ext)
     par = par_parser.PAR(et.get_name_with_ext(ExtTool.FileType.par))
     # a = cluster(par.phasespaces[' ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000'][7]['data'])
@@ -185,13 +186,13 @@ if __name__ == '__main__':
     grd = grd_parser.GRD(et.get_name_with_ext(ExtTool.FileType.grd))
     grd.parse_all_observes()
 
-    ts = [4.2e-11, 5.2e-11, 6e-11]
-    geom_path = r'D:\MagicFiles\tools\pys\paper_plot\251keV 局部 12E-3 4.6147E-3.png'
-    geom_range = [0, 0, 12E-3, 4.6147E-3]
+    ts = [1.1383e-10, 1.1983e-10, 1.358e-10, 1.5178e-10]
+    # geom_path = r'D:\MagicFiles\tools\pys\paper_plot\251keV 局部 12E-3 4.6147E-3.png'
+    # geom_range = [0, 0, 12E-3, 4.6147E-3]
 
     # 局部放大
-    zoomed_geom_path = r'D:\MagicFiles\tools\pys\paper_plot\251keV-add_probe_3.2602e-3 0 11.430e-3 3.0279e-3.png'
-    zoomed_geom_range = [3.2602e-3, 0, 11.430e-3, 3.0279e-3]
+    zoomed_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23-0,0,38.116e-3,10.625e-3.geom.png"
+    zoomed_geom_range = [0, 0, 38.116e-3, 10.625e-3]
     # zoomed_geom_path = r'D:\MagicFiles\tools\pys\paper_plot\251keV_6.7828e-3 0 10.530e-3 1.4165e-3.png'
     # zoomed_geom_range = [6.7828e-3 ,0, 10.530e-3 ,1.4165e-3]
     for i in range(len(ts)):
@@ -200,7 +201,7 @@ if __name__ == '__main__':
                      geom_picture_path=zoomed_geom_path,
                      geom_range=zoomed_geom_range, contour_title=' FIELD |E| @OSYS$AREA,SHADE-#2',
                      phasespace_title_z_r=" ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000",
-                     contour_range=[0, 2.5e8], ax=plt.gca(), show_particles=False)
+                     contour_range=[0, 1e8], ax=plt.gca(), show_particles=False)
 
     # fig, axs = plt.subplots(
     #     2, 1, sharex=True, figsize=(7, 6),
@@ -209,19 +210,21 @@ if __name__ == '__main__':
     for i in range(len(ts)):
         two_axes: typing.Tuple[plt.Axes] = (axs[i], axs[i].twinx())
         Ez_vs_zr(ts[i], grd, par, r' FIELD EZ @LINE_AXIS$ #1.1',
-                 ' ALL PARTICLES @AXES(X1,X2)-#2 $$$PLANE_X1_AND_X2_AT_X0=  0.000', two_axes)
+                 phasespace_title_z_r, two_axes)
         two_axes[1].set_ylim(-200, 200)
     two_axes[0].set_xlabel("z (mm)")
     two_axes[0].set_ylabel("$E_z$ (MV/m)")
     two_axes[1].set_ylabel(r"r ($\mu m$)")
     axs[0].set_xlim(3, 12)
     plt.figure()
-    plot_Ek_along_z(par, ' ALL PARTICLES @AXES(X1,KE)-#3 $$$PLANE_X1_AND_KE_AT_X0=  0.000', -1, 1000.0, plt.gca(),
+    plot_Ek_along_z(par, phasespace_title_z_Ek, -1, 1000.0, plt.gca(),
                     do_cluster=False)
     fig, axs = plt.subplots(2, 1, constrained_layout=True)
-    plot_observe_data(grd, ' FIELD E1 @PROBE0_2,FFT-#13.1', ' FIELD E1 @PROBE0_2,FFT-#13.2', axs)
+    obs_title_time_domain = ' FIELD E1 @PROBE0_2,FFT-#13.1'
+    obs_title_frequency_domain = ' FIELD E1 @PROBE0_2,FFT-#13.2'
+    plot_observe_data(grd, obs_title_time_domain, obs_title_frequency_domain, axs)
     axs[1].set_xlim(0, 2e3)
     plt.figure(constrained_layout=True)
     plot_where_is_the_probe(
-        zoomed_geom_path, zoomed_geom_range, grd, ' FIELD E1 @PROBE0_2,FFT-#13.1', plt.gca())
+        zoomed_geom_path, zoomed_geom_range, grd, obs_title_time_domain, plt.gca())
     plt.show()

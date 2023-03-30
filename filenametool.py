@@ -4,7 +4,7 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : filenametool.py
 # @Software: PyCharm
-
+import re
 import enum
 class ExtTool:
     """

@@ -12,6 +12,7 @@ import matplotlib
 
 import _base
 
+
 matplotlib.use("TkAgg")
 
 import enum
@@ -381,15 +382,15 @@ def plot_Ez_z_Ek_all_time(grd, par, ts: typing.Iterable[float], fig_path: str,
 
 if __name__ == '__main__':
     filename_no_ext = os.path.splitext(
-        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-15-05-change_algrithom.m2d"
+        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\3MeV.grd"
     )[0]
     phasespace_title_z_Ek = ' ALL PARTICLES @AXES(X1,KE)-#4 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r = ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
     Ez_title = ' FIELD EZ @LINE_AXIS$ #1.1'
     contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#1'
     contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#2'
-    obs_title_time_domain = ' FIELD E1 @PROBE0_1,FFT-#7.1'
-    obs_title_frequency_domain = ' FIELD E1 @PROBE0_1,FFT-#7.2'
+    obs_title_time_domain = ' FIELD E1 @PROBE0_3,FFT-#7.1'
+    obs_title_frequency_domain =' FIELD E1 @PROBE0_3,FFT-#7.2'
 
     et = ExtTool(filename_no_ext)
     fld = fld_parser.FLD(et.get_name_with_ext(ExtTool.FileType.fld))
@@ -418,6 +419,9 @@ if __name__ == '__main__':
                               )
     Z, R = fld.x1x2grid[contour_title_E_abs]
     plot_where_is_the_probe(et.get_name_with_ext(et.FileType.geom_png), [Z[0, 0], 0, Z[-1, -1], R[-1, -1]], grd,
-                            obs_title_time_domain, plt.subplots()[1])
-    plot_observe_data(grd, obs_title_time_domain, obs_title_frequency_domain, plt.subplots(2, 1)[1])
+                            obs_title_time_domain, plt.subplots(constrained_layout=True)[1])
+    plt.gcf().savefig(os.path.join (res_dir_name,'probe_loc.svg'))
+    plot_observe_data(grd, obs_title_time_domain, obs_title_frequency_domain, plt.subplots(2, 1,constrained_layout=True)[1])
+    plt.gcf().savefig(os.path.join (res_dir_name,'td_fd.svg'))
+
     plt.show()
