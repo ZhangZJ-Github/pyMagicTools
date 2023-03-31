@@ -65,8 +65,9 @@ def contour_zoom(t, fld: fld_parser.FLD, par: par_parser.PAR, geom_picture_path,
     #     slice(*((r_factors * x1g.shape[0]).astype(int))), slice(*((z_factors * x1g.shape[1]).astype(int)))]
     # zoomed_x1g = get_zoomed(x1g)
     # zoomed_x2g = get_zoomed(x2g)
-    zoomed_x1g, zoomed_x2g, zoomed_field_data = get_partial_data(geom_range, fld.x1x2grid[contour_title],
-                                                                 field_data, True)
+    zoomed_x1g, zoomed_x2g, zoomed_field_data_ = get_partial_data(geom_range, fld.x1x2grid[contour_title],
+                                                                  field_data, True)
+    zoomed_field_data = zoomed_field_data_[0]
     x1g_sym = numpy.vstack([zoomed_x1g, zoomed_x1g]) * scale_factor
     x2g_sym = numpy.vstack([-zoomed_x2g[::-1], zoomed_x2g]) * scale_factor
     geom_range = numpy.array(geom_range) * scale_factor
@@ -162,9 +163,9 @@ def plot_Ek_along_z(par: par_parser.PAR, Ek_title, t_start, t_end, ax: plt.Axes,
 
             for i in range(len(datas)):
                 each_bunch = datas[i]
-                ax.plot(each_bunch[0] * 1e3, each_bunch[1] / 1e3, '.', markersize=.2,
+                ax.plot(each_bunch[0] * 1e3, each_bunch[1] / 1e6, '.', markersize=.2,
                         color=colors[i])
-    ax.set_ylabel('energy (keV)')
+    ax.set_ylabel('energy (MeV)')
     ax.set_xlabel('z (mm)')
     # plt.gcf().tight_layout()
 
@@ -175,7 +176,7 @@ if __name__ == '__main__':
     outdir = r'D:\MagicFiles\tools\pys\paper_plot\.out'
 
     filename_no_ext = os.path.splitext(
-        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.toc"
+        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\3MeV-02.grd"
     )[0]
     phasespace_title_z_Ek = ' TEST_ELECTRON @AXES(X1,KE)-#5 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r = ' TEST_ELECTRON @AXES(X1,X2)-#2 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
@@ -186,13 +187,16 @@ if __name__ == '__main__':
     grd = grd_parser.GRD(et.get_name_with_ext(ExtTool.FileType.grd))
     grd.parse_all_observes()
 
-    ts = [1.1383e-10, 1.1983e-10, 1.358e-10, 1.5178e-10]
+    # ts = [1.1383e-10, 1.1983e-10, 1.358e-10, 1.5178e-10]
+    ts = [40e-12, 50e-12, 62e-12]
     # geom_path = r'D:\MagicFiles\tools\pys\paper_plot\251keV 局部 12E-3 4.6147E-3.png'
     # geom_range = [0, 0, 12E-3, 4.6147E-3]
 
     # 局部放大
-    zoomed_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23-0,0,38.116e-3,10.625e-3.geom.png"
-    zoomed_geom_range = [0, 0, 38.116e-3, 10.625e-3]
+    zoomed_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\3MeV-02.geom_0,0,30e-3,12e-3.png"
+    zoomed_geom_range = [0, 0, 30e-3, 12e-3]
+    # zoomed_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23-0,0,38.116e-3,10.625e-3.geom.png"
+    # zoomed_geom_range = [0, 0, 38.116e-3, 10.625e-3]
     # zoomed_geom_path = r'D:\MagicFiles\tools\pys\paper_plot\251keV_6.7828e-3 0 10.530e-3 1.4165e-3.png'
     # zoomed_geom_range = [6.7828e-3 ,0, 10.530e-3 ,1.4165e-3]
     for i in range(len(ts)):
@@ -201,7 +205,7 @@ if __name__ == '__main__':
                      geom_picture_path=zoomed_geom_path,
                      geom_range=zoomed_geom_range, contour_title=' FIELD |E| @OSYS$AREA,SHADE-#2',
                      phasespace_title_z_r=" ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000",
-                     contour_range=[0, 1e8], ax=plt.gca(), show_particles=False)
+                     contour_range=[0, 1e9], ax=plt.gca(), show_particles=False)
 
     # fig, axs = plt.subplots(
     #     2, 1, sharex=True, figsize=(7, 6),
@@ -220,11 +224,14 @@ if __name__ == '__main__':
     plot_Ek_along_z(par, phasespace_title_z_Ek, -1, 1000.0, plt.gca(),
                     do_cluster=False)
     fig, axs = plt.subplots(2, 1, constrained_layout=True)
-    obs_title_time_domain = ' FIELD E1 @PROBE0_2,FFT-#13.1'
-    obs_title_frequency_domain = ' FIELD E1 @PROBE0_2,FFT-#13.2'
+    obs_title_time_domain = ' FIELD E1 @PROBE0_3,FFT-#7.1'
+    obs_title_frequency_domain = obs_title_time_domain[:-1] + '2'
     plot_observe_data(grd, obs_title_time_domain, obs_title_frequency_domain, axs)
     axs[1].set_xlim(0, 2e3)
     plt.figure(constrained_layout=True)
     plot_where_is_the_probe(
         zoomed_geom_path, zoomed_geom_range, grd, obs_title_time_domain, plt.gca())
+    vector_title = ' FIELD E(X1,X2) @CHANNEL1-#1'
+    plot_vector(49e-12, fld, par, vector_title, phasespace_title_z_r, plt.subplots( constrained_layout=True)[1],
+                units.mm)
     plt.show()

@@ -107,7 +107,7 @@ def plot_where_is_the_probe(geom_path: str, geom_range, grd, title, ax: plt.Axes
     plot_geom(geom_path, geom_range, ax)  # 显示几何结构
     probe_position = re.findall(_base.FrequentUsedPatter.float + r'(\w+)',
                                 grd.obs[title]['location_str'])
-    length_unit_to_SI_unit_factors = _base.uc
+    length_unit_to_SI_unit_factors = _base.uc.length_unit_to_SI_unit_factors
     pos = [0, 0]
     for i in range(len(pos)):
         pos[i] = float(''.join(probe_position[i][:2])) * length_unit_to_SI_unit_factors[
@@ -397,20 +397,21 @@ def plot_vector(t, fld: fld_parser.FLD, par: par_parser.PAR, vector_title, phase
     x1g_partial, x2g_partial, data_partial = x1g, x2g, data  # get_partial_data([6e-3, 0, 10e-3, 0.0005], (x1g, x2g), data, False, 2)
     x1g_sym, x2g_sym, data_sym = get_sym(x1g_partial, x2g_partial, data_partial, [1, -1])
 
-    ax.quiver(x1g_sym / length_unit.scale_factor, x2g_sym / length_unit.scale_factor, *data_sym,
+    ax.quiver(x1g_sym / length_unit.scale_factor, x2g_sym / length_unit.scale_factor, *data_sym, data_sym[0],
+              cmap=plt.get_cmap('jet')
               # scale =1e-9
               )
-
     t_zr, zr_data, i_zr = par.get_data_by_time(t, phase_space_zr_title)
     logger.info("t_vector = %.2e, t_zr = %.2e" % (t_actual, t_zr))
     zr_bottom = zr_data.copy()
-    zr_bottom[1] *=-1
-    zr_data_sym = numpy.vstack([zr_data.values,zr_bottom.values])
-    ax.scatter(*(zr_data_sym.T / length_unit.scale_factor),s= .3 )
+    zr_bottom[1] *= -1
+    zr_data_sym = numpy.vstack([zr_data.values, zr_bottom.values])
+    ax.scatter(*(zr_data_sym.T / length_unit.scale_factor),  s=.6,
+               c= 'r')
     ax.set_aspect('equal')
     ax.set_xlabel('z / %s' % length_unit.abbrev)
     ax.set_ylabel('r / %s' % length_unit.abbrev)
-    ax.set_title("%.2f ps"%(t/1e-12))
+    ax.set_title("%.2f ps" % (t / 1e-12))
 
 
 if __name__ == '__main__':
@@ -460,6 +461,5 @@ if __name__ == '__main__':
     phasespace_title_z_r_test_bunch = ' TEST_ELECTRON @AXES(X1,X2)-#2 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
     plot_vector(4.7930e-11, fld, par, ' FIELD E(X1,X2) @CHANNEL1-#1', phasespace_title_z_r_test_bunch,
                 plt.subplots(constrained_layout=True)[1], units.mm)
-
 
     plt.show()
