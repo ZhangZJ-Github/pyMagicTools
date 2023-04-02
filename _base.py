@@ -74,7 +74,10 @@ class ParserBase:
         return self.dict_name_to_BlockType.get(re.search(r"\n [a-z,A-Z]+", block_str).group()[2:],
                                                self.BlockType.NOT_IMPLEMENT)
 
-    def __init__(self, filename):
+    def __init__(self, filename, do_not_initialize_again=False):
+        if do_not_initialize_again:# 避免多继承时反复读文件
+            logger.debug('用户指定不执行初始化操作')
+            return
         t = time.time()
         self.filename = filename
         self.text = ""
@@ -119,13 +122,16 @@ def find_data_near_t(data_all_time, t,
             i = max(i - 1, 0)
             break
     return how_to_get_t(data_all_time, i), how_to_get_data(data_all_time, i), i
-from  sympy.physics import units
-class UnitConvertor :
+
+
+class UnitConvertor:
     def __init__(self):
-        self.length_unit_to_SI_unit_factors =       {
-        "m": 1,
-        "cm": 1e-2,
-        "mm": 1e-3,
-        "um": 1e-6
-    }
+        self.length_unit_to_SI_unit_factors = {
+            "m": 1,
+            "cm": 1e-2,
+            "mm": 1e-3,
+            "um": 1e-6
+        }
+
+
 uc = UnitConvertor()

@@ -63,7 +63,7 @@ class GRD(_base.ParserBase):
     def __init__(self, filename):
         super(GRD, self).__init__(filename)
         self.parse_all_range_datas()
-        self.obs: typing.Dict[typing.Dict] = {}
+        self.obs: typing.Dict[str, typing.Dict] = {}
         self.parse_all_observes()
 
     def parse_all_observes(self):
@@ -89,31 +89,46 @@ class GRD(_base.ParserBase):
             logger.info("解析observe data用时： %.2f" % (time.time() - t0))
         return self.obs
 
+    def parse_range_data(self, j):
+        """
+        解析第j个RANGE数据
+        :param j:
+        :return:
+        """
+        rangestr = self.blocks_groupby_type[self.BlockType.RANGE][j]
+        # self.ranges = {}
+
+        # for rangestr in raw_ranges:
+        line_list = rangestr.splitlines(True)
+        title = line_list[2][:-1]  # Without '\n'
+        # time_with_unit = re.findall(r" Time [0-9]+.[0-9]+\s+[a-z,A-Z]+", line_list[3040 - 3028])[0][6:].split(" ")
+        # t = float(time_with_unit[0]) * frequent_used_unit_to_SI_unit['time'][time_with_unit[1]]
+        t = float(''.join(*re.findall(r' RANGE\s+' + _base.FrequentUsedPatter.float, line_list[1])))
+        lines_of_data = int(re.findall(r'ARRAY_\s+([0-9]+)_BY_ ', rangestr)[0])
+        data = {}
+        for i in range(min(100, len(line_list))):  # 查找前几行是否有满足要求的数据开头标记（行数）
+            if re.match(r'\s+' + '%d' % lines_of_data + r'\s*\n', line_list[i]):
+                df = pandas.read_csv(StringIO(''.join(line_list[i + 1:i + 1 + lines_of_data])), sep=r'\s+',
+                                     header=None)
+                data = {
+                    "t": t,
+                    "data": df
+                }
+
+                break
+
+        return data, title
+
     def parse_all_range_datas(self):
+        t0 = time.time()
         raw_ranges = self.blocks_groupby_type[self.BlockType.RANGE]
         self.ranges = {}
-        for rangestr in raw_ranges:
-            line_list = rangestr.splitlines(True)
-            title = line_list[2][:-1]  # Without '\n'
-            # time_with_unit = re.findall(r" Time [0-9]+.[0-9]+\s+[a-z,A-Z]+", line_list[3040 - 3028])[0][6:].split(" ")
-            # t = float(time_with_unit[0]) * frequent_used_unit_to_SI_unit['time'][time_with_unit[1]]
-            t = float(''.join(*re.findall(r' RANGE\s+' + _base.FrequentUsedPatter.float, line_list[1])))
-            lines_of_data = int(re.findall(r'ARRAY_\s+([0-9]+)_BY_ ', rangestr)[0])
+        for i in range(len(raw_ranges)):
+            data, title = self.parse_range_data(i)
             range_of_this_title = self.ranges.get(title, [])
-            for i in range(min(100, len(line_list))):  # 查找前几行是否有满足要求的数据开头标记（行数）
-                if re.match(r'\s+' + '%d' % lines_of_data + r'\s*\n', line_list[i]):
-                    df = pandas.read_csv(StringIO(''.join(line_list[i + 1:i + 1 + lines_of_data])), sep=r'\s+',
-                                         header=None)
-
-                    range_of_this_title.append(
-                        {
-                            "t": t,
-                            "data": df
-                        }
-                    )
-                    break
-
+            range_of_this_title.append(data)
             self.ranges[title] = range_of_this_title
+        logger.debug('解析所有range data: %.2f s'%(time.time() - t0 ))
         return self.ranges
 
     def get_data_by_time(self, t, title):

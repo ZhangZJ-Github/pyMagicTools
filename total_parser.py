@@ -82,7 +82,7 @@ def get_partial_data(geom_range, x1x2grid: typing.Tuple[numpy.ndarray, numpy.nda
             *((z_factors * x1g.shape[1] + numpy.array((0, 1))).astype(int)))]
     zoomed_x1g = get_zoomed_2d(x1g)
     zoomed_x2g = get_zoomed_2d(x2g)
-    zoomed_field_data = [None] * 2
+    zoomed_field_data = [None] * n_components
     for i in range(n_components):
         zoomed_field_data[i] = get_zoomed_2d(field_value[i])
     return zoomed_x1g, zoomed_x2g, zoomed_field_data
@@ -217,7 +217,7 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
     if not geom_range:
         geom_range = [x1g[0, 0], 0, x1g[-1, -1], x2g[-1, -1]]
     zoomed_x1g, zoomed_x2g, zoomed_field_data_ = get_partial_data(
-        geom_range, fld.x1x2grid[contour_title], field_data, True)
+        geom_range, fld.x1x2grid[contour_title], field_data_, True)
     zoomed_field_data = zoomed_field_data_[0]
     x1g_sym = numpy.vstack([zoomed_x1g, zoomed_x1g])
     x2g_sym = numpy.vstack([-zoomed_x2g[::-1], zoomed_x2g])
@@ -416,7 +416,7 @@ def plot_vector(t, fld: fld_parser.FLD, par: par_parser.PAR, vector_title, phase
 
 if __name__ == '__main__':
     filename_no_ext = os.path.splitext(
-        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.tlg"
+        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23-s2-cone.sum"
     )[0]
     phasespace_title_z_Ek = ' ALL PARTICLES @AXES(X1,KE)-#4 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r = ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
@@ -436,28 +436,28 @@ if __name__ == '__main__':
     copy_m2d_to_res_folder(res_dir_name, et)
     t_end = grd.ranges[tuple(grd.ranges.keys())[0]][-1]['t']
 
-    # plot_Ez_z_Ek_all_time(grd, par, numpy.arange(0, t_end, 2e-12),
-    #                       os.path.join(res_dir_name, '轴上电场.png'),
-    #                       Ez_title, phasespace_title_z_Ek)
-    #
-    # export_contours_in_folder(fld, par, grd, et, contour_title_Ez, Ez_title, phasespace_title_z_r,
-    #                           phasespace_title_z_Ek,
-    #                           res_dir_name, t_end, 2e-12,
-    #                           contour_range=[-1e8, 1e8]
-    #                           )
+    plot_Ez_z_Ek_all_time(grd, par, numpy.arange(0, t_end, 2e-12),
+                          os.path.join(res_dir_name, '轴上电场.png'),
+                          Ez_title, phasespace_title_z_Ek)
+
+    export_contours_in_folder(fld, par, grd, et, contour_title_Ez, Ez_title, phasespace_title_z_r,
+                              phasespace_title_z_Ek,
+                              res_dir_name, t_end, 2e-12,
+                              contour_range=[-1e8, 1e8]
+                              )
     # _, Ezmax = get_min_and_max(fld, contour_title_E_abs)
-    # export_contours_in_folder(fld, par, grd, et, contour_title_E_abs, Ez_title, phasespace_title_z_r,
-    #                           phasespace_title_z_Ek,
-    #                           res_dir_name, t_end, 2e-12,
-    #                           contour_range=[0, Ezmax]
-    #                           )
-    # Z, R = fld.x1x2grid[contour_title_E_abs]
-    # plot_where_is_the_probe(et.get_name_with_ext(et.FileType.geom_png), [Z[0, 0], 0, Z[-1, -1], R[-1, -1]], grd,
-    #                         obs_title_time_domain, plt.subplots(constrained_layout=True)[1])
-    # plt.gcf().savefig(os.path.join(res_dir_name, 'probe_loc.svg'))
-    # plot_observe_data(grd, obs_title_time_domain, obs_title_frequency_domain,
-    #                   plt.subplots(2, 1, constrained_layout=True)[1])
-    # plt.gcf().savefig(os.path.join(res_dir_name, 'td_fd.svg'))
+    export_contours_in_folder(fld, par, grd, et, contour_title_E_abs, Ez_title, phasespace_title_z_r,
+                              phasespace_title_z_Ek,
+                              res_dir_name, t_end, 2e-12,
+                              contour_range=[0, 1e7]
+                              )
+    Z, R = fld.x1x2grid[contour_title_E_abs]
+    plot_where_is_the_probe(et.get_name_with_ext(et.FileType.geom_png), [Z[0, 0], 0, Z[-1, -1], R[-1, -1]], grd,
+                            obs_title_time_domain, plt.subplots(constrained_layout=True)[1])
+    plt.gcf().savefig(os.path.join(res_dir_name, 'probe_loc.svg'))
+    plot_observe_data(grd, obs_title_time_domain, obs_title_frequency_domain,
+                      plt.subplots(2, 1, constrained_layout=True)[1])
+    plt.gcf().savefig(os.path.join(res_dir_name, 'td_fd.svg'))
     phasespace_title_z_r_test_bunch = ' TEST_ELECTRON @AXES(X1,X2)-#2 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
     plot_vector(4.7930e-11, fld, par, ' FIELD E(X1,X2) @CHANNEL1-#1', phasespace_title_z_r_test_bunch,
                 plt.subplots(constrained_layout=True)[1], units.mm)
