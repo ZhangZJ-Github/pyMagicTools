@@ -110,6 +110,12 @@ class ExportedGRD(ExportedFile, grd_parser.GRD):
         ax.plot(*(data.T))
 
     def scale_then_write(self, scale, new_filename: str):
+        """
+        所有的场数据乘以系数scale后，写入new_filename
+        :param scale:
+        :param new_filename:
+        :return:
+        """
         t = time.time()
         logger.info("开始scale_then_write")
         new_str = self.text[:self.DEFAULT_N_CHAR].splitlines(True)[
@@ -139,13 +145,13 @@ class ExportedGRD(ExportedFile, grd_parser.GRD):
 
 
 if __name__ == '__main__':
-    filename = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_export_and_import\test_export2_.grd"
+    filename = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23-exported.grd"
     filename_no_ext = os.path.splitext(filename)[0]
     et = filenametool.ExtTool(filename_no_ext)
     grd = ExportedFile(filename)
     par = ExportedFile(et.get_name_with_ext(et.FileType.par))
     suffix = "_-trim"
-    delta_t = -40e-12  # - 4.8000000e-15 + 0.6300000E-14
+    delta_t = -240e-12#-40e-12  # - 4.8000000e-15 + 0.6300000E-14
     trimed_filename_no_ext = filename_no_ext + suffix
     trimed_et = filenametool.ExtTool(trimed_filename_no_ext)
     grd.time_shift(delta_t, trimed_filename_no_ext + ".grd", grd.BlockType.RANGE)

@@ -309,7 +309,7 @@ def export_contours_in_folder(
         fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, et: ExtTool,
         contour_title: str,  # ' FIELD EX @OSYS$AREA,SHADE-#1'
         Ez_title: str, phasespace_title_z_r, phasespace_title_z_Ek,
-        res_dir_name,
+        res_dir_name, t_start,
         t_end, dt=2e-12, contour_range=[]
 ):
     """
@@ -333,7 +333,7 @@ def export_contours_in_folder(
     os.makedirs(res_dir_name_with_title, exist_ok=True)
     geom_path = et.get_name_with_ext(ExtTool.FileType.geom_png)
 
-    for t in numpy.arange(0, t_end, dt):
+    for t in numpy.arange(t_start, t_end, dt):
         old_pahsespace_data_z_Ek, t_actual = plot_contour_vs_phasespace(
             fld, par, grd, t,
             plt.subplots(
@@ -406,8 +406,8 @@ def plot_vector(t, fld: fld_parser.FLD, par: par_parser.PAR, vector_title, phase
     zr_bottom = zr_data.copy()
     zr_bottom[1] *= -1
     zr_data_sym = numpy.vstack([zr_data.values, zr_bottom.values])
-    ax.scatter(*(zr_data_sym.T / length_unit.scale_factor),  s=.6,
-               c= 'r')
+    ax.scatter(*(zr_data_sym.T / length_unit.scale_factor), s=.6,
+               c='r')
     ax.set_aspect('equal')
     ax.set_xlabel('z / %s' % length_unit.abbrev)
     ax.set_ylabel('r / %s' % length_unit.abbrev)
@@ -442,13 +442,13 @@ if __name__ == '__main__':
 
     export_contours_in_folder(fld, par, grd, et, contour_title_Ez, Ez_title, phasespace_title_z_r,
                               phasespace_title_z_Ek,
-                              res_dir_name, t_end, 2e-12,
+                              res_dir_name, 0, t_end, 2e-12,
                               contour_range=[-1e8, 1e8]
                               )
     # _, Ezmax = get_min_and_max(fld, contour_title_E_abs)
     export_contours_in_folder(fld, par, grd, et, contour_title_E_abs, Ez_title, phasespace_title_z_r,
                               phasespace_title_z_Ek,
-                              res_dir_name, t_end, 2e-12,
+                              res_dir_name, 0, t_end, 2e-12,
                               contour_range=[0, 1e7]
                               )
     Z, R = fld.x1x2grid[contour_title_E_abs]

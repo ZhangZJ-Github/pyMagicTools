@@ -51,6 +51,11 @@ class PAR(_base.ParserBase):
             self.phasespaces[title] = phasespace_of_this_title
         return self.phasespaces
     def get_data_by_time(self,t,title):
+        """
+        :param t:
+        :param title:
+        :return: t, data, i
+        """
         return _base.find_data_near_t(
             self.phasespaces[title],t,
             lambda phase_space_data, i: phase_space_data[i]["t"],

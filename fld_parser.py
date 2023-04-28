@@ -52,7 +52,7 @@ class FLD(_base.ParserBase):
             降低内存占用
             :return:
             """
-            self._field_value = None
+            self._field_value = [None] * self.n_components
 
         def _read_line_list(self,
                             blocks_grouped_by_block_type: typing.Dict[_base.ParserBase.BlockType, typing.List[str]]):
@@ -199,17 +199,16 @@ class FLD(_base.ParserBase):
             lambda generator, j: generator[j]["generator"])
         return t_actual, field_value_generator, i
 
+    def release_memory(self):
+        for each_title in self.all_generator:
+            for j in range(len(self.all_generator[each_title])):
+                self.all_generator[each_title][j]['generator'].release_memory()
+        logger.info("释放了一次内存")
+        return True
+
     def get_field_value_by_time(self, t, title=" FIELD EZ @OSYS$AREA,SHADE-#1"):
         t_actual, field_value_generator, i = self.get_generator_by_time(t, title)
-
-        def how_to_release_memory():
-            for each_title in self.all_generator:
-                for j in range(len(self.all_generator[title])):
-                    self.all_generator[each_title][j]['generator'].release_memory()
-            logger.info("释放了一次内存")
-            return True
-
-        self.memory_manager.release_memory(how_to_release_memory)
+        self.memory_manager.release_memory(lambda: self.release_memory())
         return t_actual, field_value_generator.get_field_values(self.blocks_groupby_type), i
 
 
