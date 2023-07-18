@@ -600,13 +600,13 @@ def plot_obs_Ez_JDA(grd: grd_parser.GRD, Ez_title, JDA_title, axs: typing.List[p
 
 if __name__ == '__main__':
     filename_no_ext = os.path.splitext(
-        r"D:\MagicFiles\HPM\12.5GHz\自动化\test01\0610\23.toc"
+        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_theory\r_in_400um_Qtestbeam_0fC.toc"
     )[0]
-    phasespace_title_z_Ek =' ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
+    phasespace_title_z_Ek =' ALL PARTICLES @AXES(X1,KE)-#4 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r = ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
-    Ez_title = ' FIELD EZ @LINE_PARTICLE_MOVING$,FFT #4.1'
-    contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#2'
-    contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#4'
+    Ez_title = ' FIELD EZ @LINE_AXIS$ #1.1'
+    contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#1'
+    contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#2'
     obs_title_time_domain = ' FIELD E1 @PROBE0_3,FFT-#7.1'
     obs_title_frequency_domain = ' FIELD E1 @PROBE0_3,FFT-#7.2'
 
@@ -619,21 +619,21 @@ if __name__ == '__main__':
     os.makedirs(res_dir_name, exist_ok=True)
     copy_m2d_to_res_folder(res_dir_name, et)
     t_end = grd.ranges[Ez_title][-1]['t']
-
-    plot_Ez_z_Ek_all_time(grd, par, numpy.arange(0, t_end, .5e-9),
+    dt = fld.all_generator[contour_title_Ez][1]['t'] - fld.all_generator[contour_title_Ez][0]['t']
+    plot_Ez_z_Ek_all_time(grd, par, numpy.arange(0, t_end, dt),
                           os.path.join(res_dir_name, 'Ez_along_z.png'),
                           Ez_title, phasespace_title_z_Ek)
 
     export_contours_in_folder(fld, par, grd, et, contour_title_Ez, Ez_title, phasespace_title_z_r,
                               phasespace_title_z_Ek,
-                              res_dir_name, 0, t_end,.5e-9,
-                              contour_range=[-5e7, 5e7]
+                              res_dir_name, 0, t_end,dt,
+                              contour_range=[-1e6, 1e6]
                               )
     # _, Ezmax = get_min_and_max(fld, contour_title_E_abs)
     export_contours_in_folder(fld, par, grd, et, contour_title_E_abs, Ez_title, phasespace_title_z_r,
                               phasespace_title_z_Ek,
-                              res_dir_name, 0, t_end, .5e-9,
-                              contour_range=[0, 5e7]
+                              res_dir_name, 0, t_end, dt,
+                              contour_range=[0, 1e6]
                               )
     啊啊啊啊
     Z, R = fld.x1x2grid[contour_title_E_abs]

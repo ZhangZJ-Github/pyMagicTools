@@ -38,7 +38,7 @@ class PAR(_base.ParserBase):
         """
         i = i_start
         _0_count = 0  # 前面连续几行为0
-        for line in lines:
+        for line in lines[i_start:]:
             if line.startswith('   0'):
                 _0_count += 1
             else:
