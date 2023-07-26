@@ -234,7 +234,7 @@ def plot_Ek_along_z(par: par_parser.PAR, Ek_title, t_start, t_end, ax: plt.Axes,
                 each_bunch = datas[i]
                 ax.plot(each_bunch[0] * 1e3, each_bunch[1] / 1e6, '.', markersize=.1,
                         color=colors[i])
-    ax.set_ylabel('energy (MeV)')
+    ax.set_ylabel('electron energy (MeV)')
     ax.set_xlabel('z (mm)')
     # plt.gcf().tight_layout()
 

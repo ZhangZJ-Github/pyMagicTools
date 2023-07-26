@@ -451,7 +451,7 @@ def export_contours_in_folder(
             fld, par, grd, t,
             plt.subplots(
                 2, 1, sharex=True,
-                figsize=(16, 9), constrained_layout=True)[1],
+                figsize=(12, 9), constrained_layout=True)[1],
             frac,
             geom_picture_path=geom_path,
             # geom_range=[-1.3493e-3, 0, 25.257e-3, 3.9963e-3],
@@ -600,7 +600,7 @@ def plot_obs_Ez_JDA(grd: grd_parser.GRD, Ez_title, JDA_title, axs: typing.List[p
 
 if __name__ == '__main__':
     filename_no_ext = os.path.splitext(
-        r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_theory\r_in_400um_Qtestbeam_0fC.toc"
+        r"E:\HPM\11.7GHz\manual\两次输出\base_2_port.log"
     )[0]
     phasespace_title_z_Ek =' ALL PARTICLES @AXES(X1,KE)-#4 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r = ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
