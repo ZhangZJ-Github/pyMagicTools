@@ -10,7 +10,6 @@ import time
 from typing import Dict, List
 
 import numpy
-
 from _logging import logger
 
 
@@ -24,6 +23,15 @@ frequent_used_unit_to_SI_unit = {
         "ns": 1e-9,
         "ps": 1e-12,
         "fs": 1e-15,
+    },
+    'length': {
+        'm': 1,
+        'dm': 1e-1,
+        'cm': 1e-2,
+        'mm': 1e-3,
+        'um': 1e-6,
+        'nm': 1e-9,
+
     }
 }
 
@@ -75,7 +83,7 @@ class ParserBase:
                                                self.BlockType.NOT_IMPLEMENT)
 
     def __init__(self, filename, do_not_initialize_again=False):
-        if do_not_initialize_again:# 避免多继承时反复读文件
+        if do_not_initialize_again:  # 避免多继承时反复读文件
             logger.debug('用户指定不执行初始化操作')
             return
         t = time.time()
@@ -125,13 +133,12 @@ def find_data_near_t(data_all_time, t,
 
 
 class UnitConvertor:
+    length_unit_to_SI_unit_factors = {
+        key: frequent_used_unit_to_SI_unit['length'][key] for key in frequent_used_unit_to_SI_unit['length']
+    }
+
     def __init__(self):
-        self.length_unit_to_SI_unit_factors = {
-            "m": 1,
-            "cm": 1e-2,
-            "mm": 1e-3,
-            "um": 1e-6
-        }
+        pass
 
 
 uc = UnitConvertor()
