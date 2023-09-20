@@ -13,6 +13,9 @@ import matplotlib
 import _base
 
 matplotlib.use("TkAgg")
+matplotlib.rcParams['font.family'] = 'SimHei'
+import matplotlib.pyplot
+matplotlib.pyplot.rcParams['axes.unicode_minus'] = False
 
 import os.path
 from typing import List
@@ -304,15 +307,16 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
 
     return old_phasespace_data_z_Ek, t_actual
 
+
 def plot_contour_phasespace_Iz_Ez(fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, t, axs: List[plt.Axes],
-                               frac=0.3,
-                               geom_picture_path=default_geom_path,
-                               geom_range=None,  # zmin, rmin, zmax, rmax
-                               old_phasespace_data_z_Ek=numpy.array([[0], [0]]), contour_range=[],
-                               contour_title: str = None,
-                               phasespace_title_z_Ek: str = " ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000",
-                               phasespace_title_z_r: str = " ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000",
-                               Ez_title=None, ):
+                                  frac=0.3,
+                                  geom_picture_path=default_geom_path,
+                                  geom_range=None,  # zmin, rmin, zmax, rmax
+                                  old_phasespace_data_z_Ek=numpy.array([[0], [0]]), contour_range=[],
+                                  contour_title: str = None,
+                                  phasespace_title_z_Ek: str = " ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000",
+                                  phasespace_title_z_r: str = " ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000",
+                                  Ez_title=None, ):
     t_actual, field_data_, i = fld.get_field_value_by_time(t, contour_title)
     field_data = field_data_[0]
     # field_data = generator.get_field_values(fld.blocks_groupby_type)
@@ -418,6 +422,7 @@ def plot_contour_phasespace_Iz_Ez(fld: fld_parser.FLD, par: par_parser.PAR, grd:
 
     return old_phasespace_data_z_Ek, t_actual
 
+
 def export_contours_in_folder(
         fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, et: ExtTool,
         contour_title: str,  # ' FIELD EX @OSYS$AREA,SHADE-#1'
@@ -470,7 +475,7 @@ def export_contours_in_folder(
 def export_contour_phasespace_Ez_Iz_in_folder(
         fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, et: ExtTool,
         contour_title: str,  # ' FIELD EX @OSYS$AREA,SHADE-#1'
-        Ez_title: str, phasespace_title_z_r, phasespace_title_z_Ek,Iz_title:str,
+        Ez_title: str, phasespace_title_z_r, phasespace_title_z_Ek, Iz_title: str,
         res_dir_name, t_start,
         t_end, dt=2e-12, contour_range=[]
 ):
@@ -514,6 +519,7 @@ def export_contour_phasespace_Ez_Iz_in_folder(
         plt.close(plt.gcf())
     # plt.show()
     logger.info("See result:\n%s" % (res_dir_name_with_title))
+
 
 def copy_m2d_to_res_folder(res_dir_name, et: ExtTool):
     m2dfn = et.get_name_with_ext(ExtTool.FileType.m2d)
@@ -598,15 +604,16 @@ def plot_obs_Ez_JDA(grd: grd_parser.GRD, Ez_title, JDA_title, axs: typing.List[p
         ax.legend()
         ax.grid()
 
+
 if __name__ == '__main__':
     filename_no_ext = os.path.splitext(
-        r"E:\HPM\11.7GHz\manual\两次输出\base_2_port.log"
+        r"E:\GeneratorAccelerator\manual\KaGA-coils-pillbox-cutoffneck.toc"
     )[0]
-    phasespace_title_z_Ek =' ALL PARTICLES @AXES(X1,KE)-#4 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
+    phasespace_title_z_Ek = ' ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r = ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
-    Ez_title = ' FIELD EZ @LINE_AXIS$ #1.1'
-    contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#1'
-    contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#2'
+    Ez_title = ' FIELD EZ @LINE_WITNESS_PARTICLE_MOVING$,FFT #4.1'
+    contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#2'
+    contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#4'
     obs_title_time_domain = ' FIELD E1 @PROBE0_3,FFT-#7.1'
     obs_title_frequency_domain = ' FIELD E1 @PROBE0_3,FFT-#7.2'
 
@@ -626,8 +633,8 @@ if __name__ == '__main__':
 
     export_contours_in_folder(fld, par, grd, et, contour_title_Ez, Ez_title, phasespace_title_z_r,
                               phasespace_title_z_Ek,
-                              res_dir_name, 0, t_end,dt,
-                              contour_range=[-1e6, 1e6]
+                              res_dir_name, 0, t_end, dt,
+                              contour_range=[-70e6, 70e6]
                               )
     # _, Ezmax = get_min_and_max(fld, contour_title_E_abs)
     export_contours_in_folder(fld, par, grd, et, contour_title_E_abs, Ez_title, phasespace_title_z_r,
