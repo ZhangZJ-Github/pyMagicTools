@@ -79,7 +79,7 @@ class GRD(_base.ParserBase):
                 for i in range(min(100, len(line_list))):  # 查找前几行是否有满足要求的数据开头标记（行数）
                     if re.match(r'\s+' + '%d' % lines_of_data + r'\s*\n', line_list[i]):
                         df = pandas.read_csv(StringIO(''.join(line_list[i + 1:i + 1 + lines_of_data])), sep=r'\s+',
-                                             header=None)
+                                             header=None,on_bad_lines='skip')
                         self.obs[title] = {
                             'data': df,
                             'describe': line_list[12][:-1],
@@ -109,7 +109,7 @@ class GRD(_base.ParserBase):
         for i in range(min(100, len(line_list))):  # 查找前几行是否有满足要求的数据开头标记（行数）
             if re.match(r'\s+' + '%d' % lines_of_data + r'\s*\n', line_list[i]):
                 df = pandas.read_csv(StringIO(''.join(line_list[i + 1:i + 1 + lines_of_data])), sep=r'\s+',
-                                     header=None)
+                                     header=None,on_bad_lines='skip')
                 data = {
                     "t": t,
                     "data": df
