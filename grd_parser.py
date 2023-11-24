@@ -13,9 +13,15 @@ import typing
 from io import StringIO
 from typing import List
 
+import matplotlib
+
+matplotlib.use(
+    'tkagg'
+)
 import matplotlib.pyplot as plt
 import numpy
 import pandas
+import shapely.geometry
 
 import _base
 from _logging import logger
@@ -42,6 +48,12 @@ class GRD(_base.ParserBase):
     n_block_header = 1
     n_block_grid = 1
 
+    class XODATAHelper:
+        class Type:
+            ConformalArea = 0
+            Point = 2
+            Triangle = -1
+
     # class BoundariesBlock :
     #     """
     #     Structure of boundaries block
@@ -64,7 +76,36 @@ class GRD(_base.ParserBase):
         super(GRD, self).__init__(filename)
         self.parse_all_range_datas()
         self.obs: typing.Dict[str, typing.Dict] = {}
+
         self.parse_all_observes()
+
+    def plot_geom(self, ax: plt.Axes):
+        boxes = self.objects_xodata[self.objects_xodata[0] == GRD.XODATAHelper.Type.ConformalArea]
+        shapely_boxes = []
+        for i in boxes.index:
+            box = boxes.loc[i, :]
+            shapely_box = shapely.geometry.box(box[1], box[3], box[2], box[4])
+            shapely_boxes.append(shapely_box)
+            ax.plot(*shapely_box.exterior.xy)
+
+    def parse_geom_data(self):
+        geom_data_str = self.blocks_groupby_type[self.BlockType.BOUNDARIES][0]
+        geom_data_str_linelist = geom_data_str.splitlines(True)
+        objects_array_shape = [int(num) for num in
+                               re.findall(r'\s+\$\$\$ARRAY_ \s+([0-9]+)_BY_\s+([0-9]+)_BY_', geom_data_str[:1000])[
+                                   0]]  # [列,行]
+        i_xodata_start = 16
+        i_kodata_start = 16 + 690 - 18
+        objects_xodata_str_linelist = geom_data_str_linelist[i_xodata_start:i_xodata_start + objects_array_shape[1]]
+        objects_kodata_str_linelist = geom_data_str_linelist[i_kodata_start:i_kodata_start + objects_array_shape[1]]
+
+        self.objects_xodata = pandas.read_csv(StringIO(''.join(objects_xodata_str_linelist)), sep=r'\s+',
+                                              header=None, on_bad_lines='skip')
+        self.objects_kodata = pandas.read_csv(StringIO(''.join(objects_kodata_str_linelist)), sep=r'\s+',
+                                              header=None, on_bad_lines='skip')
+        self.objects_xodata[0] = self.objects_xodata[0].astype(int)
+
+        pass
 
     def parse_all_observes(self):
         if not self.obs:
@@ -79,7 +120,7 @@ class GRD(_base.ParserBase):
                 for i in range(min(100, len(line_list))):  # 查找前几行是否有满足要求的数据开头标记（行数）
                     if re.match(r'\s+' + '%d' % lines_of_data + r'\s*\n', line_list[i]):
                         df = pandas.read_csv(StringIO(''.join(line_list[i + 1:i + 1 + lines_of_data])), sep=r'\s+',
-                                             header=None,on_bad_lines='skip')
+                                             header=None, on_bad_lines='skip')
                         self.obs[title] = {
                             'data': df,
                             'describe': line_list[12][:-1],
@@ -109,7 +150,7 @@ class GRD(_base.ParserBase):
         for i in range(min(100, len(line_list))):  # 查找前几行是否有满足要求的数据开头标记（行数）
             if re.match(r'\s+' + '%d' % lines_of_data + r'\s*\n', line_list[i]):
                 df = pandas.read_csv(StringIO(''.join(line_list[i + 1:i + 1 + lines_of_data])), sep=r'\s+',
-                                     header=None,on_bad_lines='skip')
+                                     header=None, on_bad_lines='skip')
                 data = {
                     "t": t,
                     "data": df
@@ -128,7 +169,7 @@ class GRD(_base.ParserBase):
             range_of_this_title = self.ranges.get(title, [])
             range_of_this_title.append(data)
             self.ranges[title] = range_of_this_title
-        logger.debug('解析所有range data: %.2f s'%(time.time() - t0 ))
+        logger.debug('解析所有range data: %.2f s' % (time.time() - t0))
         return self.ranges
 
     def get_data_by_time(self, t, title):
@@ -160,9 +201,14 @@ def plot_EZ_JZ(all_range_data, t, axs: List[plt.Axes]  # = plt.subplots(2, 1, sh
 
 if __name__ == '__main__':
     # filename = r"F:\MagicFiles\CherenkovAcc\cascade\Coax-2-cascade-higher-gradient-04.grd"
-    filename = r'F:\Tecent\MyData\WeChat Files\wxid_7252352519612\FileStorage\File\2023-03\ERDUAN(1).grd'
+    filename = r"E:\GeneratorAccelerator\Genac\optmz\Genac10G50keV\粗网格\单独处理\Genac10G50keV2.grd"
 
     grd = GRD(filename)
+    grd.parse_geom_data()
+    plt.ion()
+    plt.figure()
+    grd.plot_geom(plt.gca())
+    啊啊啊啊
     grd.get_block_type(grd.block_list[-1])
     rangedata = grd.parse_all_range_datas()
     fig, axs = plt.subplots(2, 1, sharex=True)

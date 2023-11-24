@@ -17,7 +17,8 @@ class ExtTool:
         grd = ".grd"
         m2d = ".m2d"
         toc = '.toc'
-        geom_png = '.geom.png'  # 手动截图的建议后缀
+        geom_png = '.geom.png'
+        png = '.png'
 
     def __init__(self, filename_no_ext):
         self.filename_no_ext = filename_no_ext
