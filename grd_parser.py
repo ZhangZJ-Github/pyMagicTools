@@ -7,6 +7,7 @@
 """
 用于解析MAGIC产生的grd文件
 """
+import enum
 import re
 import time
 import typing
@@ -14,6 +15,7 @@ from io import StringIO
 from typing import List
 
 import matplotlib
+import shapely.geometry
 
 matplotlib.use(
     'tkagg'
@@ -21,7 +23,6 @@ matplotlib.use(
 import matplotlib.pyplot as plt
 import numpy
 import pandas
-import shapely.geometry
 
 import _base
 from _logging import logger
@@ -48,11 +49,27 @@ class GRD(_base.ParserBase):
     n_block_header = 1
     n_block_grid = 1
 
-    class XODATAHelper:
-        class Type:
-            ConformalArea = 0
-            Point = 2
-            Triangle = -1
+    class Object_:
+        class AOTYPE(enum.Enum):
+            XCONFORMAL2 = 43
+            XLINE = 15
+            XFUNCTION = 55
+            XMARK = 33
+            XPOINT = 13
+            XCLINE = 17
+            AREA = 6
+            OTHER = 10086
+            UNKNOWN = 10087
+
+        @staticmethod
+        def build_XCONFORMAL2(z1, z2, r1, r2):
+            return shapely.geometry.box(z1, r1, z2, r2)
+
+        @staticmethod
+        def build_XLINE(z1z2r1r2s: numpy.ndarray):
+            # arr_ =     numpy.array(z1z2r1r2s)
+            arr = z1z2r1r2s[:, [0, 2, 1, 3]]  # z1 r1 z2 r2
+            return shapely.geometry.Polygon(arr.reshape((-1, 2)))
 
     # class BoundariesBlock :
     #     """
@@ -80,13 +97,28 @@ class GRD(_base.ParserBase):
         self.parse_all_observes()
 
     def plot_geom(self, ax: plt.Axes):
-        boxes = self.objects_xodata[self.objects_xodata[0] == GRD.XODATAHelper.Type.ConformalArea]
-        shapely_boxes = []
-        for i in boxes.index:
-            box = boxes.loc[i, :]
-            shapely_box = shapely.geometry.box(box[1], box[3], box[2], box[4])
-            shapely_boxes.append(shapely_box)
-            ax.plot(*shapely_box.exterior.xy)
+        supported_aotype = {GRD.Object_.AOTYPE.XCONFORMAL2, GRD.Object_.AOTYPE.XLINE}
+        mask = pandas.Series([False] * self.objects_aobj_aotype_iotype.shape[0])
+        for aotype in supported_aotype:
+            mask = mask | (self.objects_aobj_aotype_iotype[1] == aotype.name)
+        supported_xodata = self.objects_xodata.loc[mask]
+
+        supported_obj_names_indexes_type = {name: [[], GRD.Object_.AOTYPE.UNKNOWN] for name in
+                                            self.objects_aobj_aotype_iotype[0][mask].unique()}
+        for i in supported_xodata.index:
+            supported_obj_names_indexes_type[self.objects_aobj_aotype_iotype[0][i]][0].append(i)
+            supported_obj_names_indexes_type[self.objects_aobj_aotype_iotype[0][i]][1] = GRD.Object_.AOTYPE[
+                self.objects_aobj_aotype_iotype[1][i]]
+        polygons = []
+        for objname in supported_obj_names_indexes_type:
+            if supported_obj_names_indexes_type[objname][1] == GRD.Object_.AOTYPE.XLINE:
+                polygons.append(GRD.Object_.build_XLINE(
+                    self.objects_xodata.loc[supported_obj_names_indexes_type[objname][0]].values[:, 1:5]))
+            elif supported_obj_names_indexes_type[objname][1] == GRD.Object_.AOTYPE.XCONFORMAL2:
+                polygons.append(GRD.Object_.build_XCONFORMAL2(
+                    *self.objects_xodata.loc[supported_obj_names_indexes_type[objname][0]].values[0, 1:5]))
+        for polygon in polygons:
+            ax.plot(*polygon.exterior.xy, )
 
     def parse_geom_data(self):
         geom_data_str = self.blocks_groupby_type[self.BlockType.BOUNDARIES][0]
@@ -95,14 +127,21 @@ class GRD(_base.ParserBase):
                                re.findall(r'\s+\$\$\$ARRAY_ \s+([0-9]+)_BY_\s+([0-9]+)_BY_', geom_data_str[:1000])[
                                    0]]  # [列,行]
         i_xodata_start = 16
-        i_kodata_start = 16 + 690 - 18
+        i_kodata_start = i_xodata_start + objects_array_shape[1] + 1  # OBJECTS.KODATA(KODIM,KOBJMX)
+        i_AOBJ_AOTYPE_IOTYP_start = i_kodata_start + objects_array_shape[1] + 1  # OBJECTS.AOBJ.AOTYPE.IOTYP(KOBJMX
         objects_xodata_str_linelist = geom_data_str_linelist[i_xodata_start:i_xodata_start + objects_array_shape[1]]
         objects_kodata_str_linelist = geom_data_str_linelist[i_kodata_start:i_kodata_start + objects_array_shape[1]]
+        objects_AOBJ_AOTYPE_IOTYP_str_linelist = geom_data_str_linelist[
+                                                 i_AOBJ_AOTYPE_IOTYP_start:i_AOBJ_AOTYPE_IOTYP_start +
+                                                                           objects_array_shape[1]]
 
         self.objects_xodata = pandas.read_csv(StringIO(''.join(objects_xodata_str_linelist)), sep=r'\s+',
                                               header=None, on_bad_lines='skip')
         self.objects_kodata = pandas.read_csv(StringIO(''.join(objects_kodata_str_linelist)), sep=r'\s+',
                                               header=None, on_bad_lines='skip')
+        self.objects_aobj_aotype_iotype = pandas.read_csv(StringIO(''.join(objects_AOBJ_AOTYPE_IOTYP_str_linelist)),
+                                                          sep=r'\s+',
+                                                          header=None, on_bad_lines='skip')
         self.objects_xodata[0] = self.objects_xodata[0].astype(int)
 
         pass
@@ -202,6 +241,7 @@ def plot_EZ_JZ(all_range_data, t, axs: List[plt.Axes]  # = plt.subplots(2, 1, sh
 if __name__ == '__main__':
     # filename = r"F:\MagicFiles\CherenkovAcc\cascade\Coax-2-cascade-higher-gradient-04.grd"
     filename = r"E:\GeneratorAccelerator\Genac\optmz\Genac10G50keV\粗网格\单独处理\Genac10G50keV2.grd"
+    # filename = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.grd"
 
     grd = GRD(filename)
     grd.parse_geom_data()
