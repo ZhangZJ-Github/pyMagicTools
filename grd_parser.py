@@ -62,8 +62,24 @@ class GRD(_base.ParserBase):
             UNKNOWN = 10087
 
         @staticmethod
-        def build_XCONFORMAL2(z1, z2, r1, r2):
+        def build_XCONFORMAL2(z1z2r1r2s: numpy.ndarray, ):
+            """
+
+            :param z1z2r1r2s: 2D array, shape (1, 4)
+            :return:
+            """
+            z1, z2, r1, r2 = z1z2r1r2s[0]
             return shapely.geometry.box(z1, r1, z2, r2)
+
+        @staticmethod
+        def build_XCLINE(z1z2r1r2s: numpy.ndarray, ):
+            """
+
+            :param z1z2r1r2s: 2D array, shape (1, 4)
+            :return:
+            """
+            arr = z1z2r1r2s[:, [0, 2, 1, 3]]  # z1 r1 z2 r2
+            return shapely.geometry.LineString(arr.reshape((-1, 2)))
 
         @staticmethod
         def build_XLINE(z1z2r1r2s: numpy.ndarray):
@@ -71,19 +87,11 @@ class GRD(_base.ParserBase):
             arr = z1z2r1r2s[:, [0, 2, 1, 3]]  # z1 r1 z2 r2
             return shapely.geometry.Polygon(arr.reshape((-1, 2)))
 
-    # class BoundariesBlock :
-    #     """
-    #     Structure of boundaries block
-    #     """
-    #     i_arr_info = 7-2
-    #     def __init__(self,blklinelist):
-    #         self.blklinelist = blklinelist
-    #
-    #     def parse_arr_info (self):
-    #         res =(int(s[:-4]) for s in  re.findall(r"[0-9]+_BY_",self.blklinelist))
-    #         n_cols = res[0]
-    #         n_values = res[1]
-    #         return n_cols, n_values
+        # how_to_build_shape = {
+        #     AOTYPE.XCONFORMAL2: build_XCONFORMAL2,
+        #     AOTYPE.XLINE: build_XLINE,
+        #     AOTYPE.XCLINE: build_XCLINE,
+        # }
 
     def get_block_type(self, block_str) -> _base.ParserBase.BlockType:
         return self.dict_name_to_BlockType.get(re.search(r"\n [a-z,A-Z]+", block_str).group()[2:],
@@ -95,31 +103,37 @@ class GRD(_base.ParserBase):
         self.obs: typing.Dict[str, typing.Dict] = {}
         self.parse_all_observes()
 
-
-    def parse_geom(self) -> typing.Dict[str,
-        typing.Union[shapely.geometry.Polygon, shapely.geometry.Point]]:
+    def parse_geom(self) -> typing.Dict[
+        str,
+        typing.Union[shapely.geometry.Polygon, shapely.geometry.Point, shapely.geometry.LineString]]:
+        how_to_build_shape = {
+            GRD.Object_.AOTYPE.XCONFORMAL2: GRD.Object_.build_XCONFORMAL2,
+            GRD.Object_.AOTYPE.XLINE: GRD.Object_.build_XLINE,
+            GRD.Object_.AOTYPE.XCLINE: GRD.Object_.build_XCLINE,
+        }
         self._parse_BOUNDARIES()
-        supported_aotype = {GRD.Object_.AOTYPE.XCONFORMAL2, GRD.Object_.AOTYPE.XLINE}
+        supported_aotype = {GRD.Object_.AOTYPE.XCONFORMAL2, GRD.Object_.AOTYPE.XLINE, GRD.Object_.AOTYPE.XCLINE}
         mask = pandas.Series([False] * self._objects_aobj_aotype_iotype.shape[0])
         for aotype in supported_aotype:
             mask = mask | (self._objects_aobj_aotype_iotype[1] == aotype.name)
         supported_xodata = self._objects_xodata.loc[mask]
 
-        supported_obj_names_indexes_type = {name: [[], GRD.Object_.AOTYPE.UNKNOWN] for name in
-                                            self._objects_aobj_aotype_iotype[0][mask].unique()}
+        supported_obj_names_indexes_type = {
+            name: [
+                [], GRD.Object_.AOTYPE.UNKNOWN
+            ] for name in
+            self._objects_aobj_aotype_iotype[0][mask].unique()
+        }
         for i in supported_xodata.index:
             supported_obj_names_indexes_type[self._objects_aobj_aotype_iotype[0][i]][0].append(i)
             supported_obj_names_indexes_type[self._objects_aobj_aotype_iotype[0][i]][1] = GRD.Object_.AOTYPE[
                 self._objects_aobj_aotype_iotype[1][i]]
-        polygons = {}
+        shapes = {}
         for objname in supported_obj_names_indexes_type:
-            if supported_obj_names_indexes_type[objname][1] == GRD.Object_.AOTYPE.XLINE:
-                polygons[objname] = (GRD.Object_.build_XLINE(
-                    self._objects_xodata.loc[supported_obj_names_indexes_type[objname][0]].values[:, 1:5]))
-            elif supported_obj_names_indexes_type[objname][1] == GRD.Object_.AOTYPE.XCONFORMAL2:
-                polygons[objname] = (GRD.Object_.build_XCONFORMAL2(
-                    *self._objects_xodata.loc[supported_obj_names_indexes_type[objname][0]].values[0, 1:5]))
-        return polygons
+            shapes[objname] = how_to_build_shape[supported_obj_names_indexes_type[objname][1]](
+                self._objects_xodata.loc[supported_obj_names_indexes_type[objname][0]].values[:, 1:5])
+
+        return shapes
 
     def plot_geom(self, ax: plt.Axes):
         polygons = self.parse_geom()

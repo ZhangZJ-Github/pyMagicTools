@@ -61,6 +61,5 @@ geom = GEOM(filename)
 plt.figure()
 geom.plot(plt.gca())
 ```
-
-![9d6730f8c7ae9904e71d4806d55abb68.png](.md_attachments/9d6730f8c7ae9904e71d4806d55abb68.png)
-![03843dd168382254da1ce501cce9a4d1.png](.md_attachments/03843dd168382254da1ce501cce9a4d1.png)
+![24f98c60e811c85ee045b70eef7fd78b.png](.md_attachments/24f98c60e811c85ee045b70eef7fd78b.png)
+![2f1e24d84df5afcd85ada993bc97f364.png](.md_attachments/2f1e24d84df5afcd85ada993bc97f364.png)
