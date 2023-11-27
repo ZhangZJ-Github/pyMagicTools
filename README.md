@@ -48,4 +48,19 @@ paper_plot/trivial.py输出精修图：
 ![238b54c8d91709e4b6038700eaf6b8d4.png](.md_attachments/238b54c8d91709e4b6038700eaf6b8d4.png)
 ![a072f7196d44eb93e270a42f12203c37.png](.md_attachments/a072f7196d44eb93e270a42f12203c37.png)
 
-（其中几何结构通过贴图实现，须事先保存几何结构的截图）
+（上面的示例中，几何结构通过贴图实现，须事先保存几何结构的截图）
+
+## 绘制几何结构
+
+```python
+from geom_parser import GEOM
+import matplotlib.pyplot as plt
+filename = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.grd"
+# filename = r"E:\GeneratorAccelerator\Genac\optmz\Genac10G50keV\粗网格\单独处理\Genac10G50keV2.grd"
+geom = GEOM(filename)
+plt.figure()
+geom.plot(plt.gca())
+```
+
+![9d6730f8c7ae9904e71d4806d55abb68.png](.md_attachments/9d6730f8c7ae9904e71d4806d55abb68.png)
+![03843dd168382254da1ce501cce9a4d1.png](.md_attachments/03843dd168382254da1ce501cce9a4d1.png)
