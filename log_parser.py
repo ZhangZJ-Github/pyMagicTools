@@ -25,7 +25,7 @@ class LOG:
             self.text = f.read()
         t1 = time.time()
         logger.info("将文件%s读入内存（未处理）耗时：%.2f" % (filename, t1 - t))
-        self.geom_structure = self.parse_geom_generator_result(self.text)
+        self.geom_structure_generator_result = self.parse_geom_generator_result(self.text)
 
     @staticmethod
     def parse_geom_generator_result(text: str) -> pandas.DataFrame:

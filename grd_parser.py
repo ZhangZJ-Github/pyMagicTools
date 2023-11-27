@@ -93,34 +93,44 @@ class GRD(_base.ParserBase):
         super(GRD, self).__init__(filename)
         self.parse_all_range_datas()
         self.obs: typing.Dict[str, typing.Dict] = {}
-
         self.parse_all_observes()
 
-    def plot_geom(self, ax: plt.Axes):
+
+    def parse_geom(self) -> typing.Dict[str,
+        typing.Union[shapely.geometry.Polygon, shapely.geometry.Point]]:
+        self._parse_BOUNDARIES()
         supported_aotype = {GRD.Object_.AOTYPE.XCONFORMAL2, GRD.Object_.AOTYPE.XLINE}
-        mask = pandas.Series([False] * self.objects_aobj_aotype_iotype.shape[0])
+        mask = pandas.Series([False] * self._objects_aobj_aotype_iotype.shape[0])
         for aotype in supported_aotype:
-            mask = mask | (self.objects_aobj_aotype_iotype[1] == aotype.name)
-        supported_xodata = self.objects_xodata.loc[mask]
+            mask = mask | (self._objects_aobj_aotype_iotype[1] == aotype.name)
+        supported_xodata = self._objects_xodata.loc[mask]
 
         supported_obj_names_indexes_type = {name: [[], GRD.Object_.AOTYPE.UNKNOWN] for name in
-                                            self.objects_aobj_aotype_iotype[0][mask].unique()}
+                                            self._objects_aobj_aotype_iotype[0][mask].unique()}
         for i in supported_xodata.index:
-            supported_obj_names_indexes_type[self.objects_aobj_aotype_iotype[0][i]][0].append(i)
-            supported_obj_names_indexes_type[self.objects_aobj_aotype_iotype[0][i]][1] = GRD.Object_.AOTYPE[
-                self.objects_aobj_aotype_iotype[1][i]]
-        polygons = []
+            supported_obj_names_indexes_type[self._objects_aobj_aotype_iotype[0][i]][0].append(i)
+            supported_obj_names_indexes_type[self._objects_aobj_aotype_iotype[0][i]][1] = GRD.Object_.AOTYPE[
+                self._objects_aobj_aotype_iotype[1][i]]
+        polygons = {}
         for objname in supported_obj_names_indexes_type:
             if supported_obj_names_indexes_type[objname][1] == GRD.Object_.AOTYPE.XLINE:
-                polygons.append(GRD.Object_.build_XLINE(
-                    self.objects_xodata.loc[supported_obj_names_indexes_type[objname][0]].values[:, 1:5]))
+                polygons[objname] = (GRD.Object_.build_XLINE(
+                    self._objects_xodata.loc[supported_obj_names_indexes_type[objname][0]].values[:, 1:5]))
             elif supported_obj_names_indexes_type[objname][1] == GRD.Object_.AOTYPE.XCONFORMAL2:
-                polygons.append(GRD.Object_.build_XCONFORMAL2(
-                    *self.objects_xodata.loc[supported_obj_names_indexes_type[objname][0]].values[0, 1:5]))
-        for polygon in polygons:
-            ax.plot(*polygon.exterior.xy, )
+                polygons[objname] = (GRD.Object_.build_XCONFORMAL2(
+                    *self._objects_xodata.loc[supported_obj_names_indexes_type[objname][0]].values[0, 1:5]))
+        return polygons
 
-    def parse_geom_data(self):
+    def plot_geom(self, ax: plt.Axes):
+        polygons = self.parse_geom()
+        for objname in polygons:
+            ax.plot(*polygons[objname].exterior.xy, )
+
+    def _parse_BOUNDARIES(self):
+        """
+        初步解析BOUNDARIES块
+        :return:
+        """
         geom_data_str = self.blocks_groupby_type[self.BlockType.BOUNDARIES][0]
         geom_data_str_linelist = geom_data_str.splitlines(True)
         objects_array_shape = [int(num) for num in
@@ -135,16 +145,14 @@ class GRD(_base.ParserBase):
                                                  i_AOBJ_AOTYPE_IOTYP_start:i_AOBJ_AOTYPE_IOTYP_start +
                                                                            objects_array_shape[1]]
 
-        self.objects_xodata = pandas.read_csv(StringIO(''.join(objects_xodata_str_linelist)), sep=r'\s+',
-                                              header=None, on_bad_lines='skip')
-        self.objects_kodata = pandas.read_csv(StringIO(''.join(objects_kodata_str_linelist)), sep=r'\s+',
-                                              header=None, on_bad_lines='skip')
-        self.objects_aobj_aotype_iotype = pandas.read_csv(StringIO(''.join(objects_AOBJ_AOTYPE_IOTYP_str_linelist)),
-                                                          sep=r'\s+',
-                                                          header=None, on_bad_lines='skip')
-        self.objects_xodata[0] = self.objects_xodata[0].astype(int)
-
-        pass
+        self._objects_xodata = pandas.read_csv(StringIO(''.join(objects_xodata_str_linelist)), sep=r'\s+',
+                                               header=None, on_bad_lines='skip')
+        self._objects_kodata = pandas.read_csv(StringIO(''.join(objects_kodata_str_linelist)), sep=r'\s+',
+                                               header=None, on_bad_lines='skip')
+        self._objects_aobj_aotype_iotype = pandas.read_csv(StringIO(''.join(objects_AOBJ_AOTYPE_IOTYP_str_linelist)),
+                                                           sep=r'\s+',
+                                                           header=None, on_bad_lines='skip')
+        self._objects_xodata[0] = self._objects_xodata[0].astype(int)
 
     def parse_all_observes(self):
         if not self.obs:
@@ -244,7 +252,7 @@ if __name__ == '__main__':
     # filename = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.grd"
 
     grd = GRD(filename)
-    grd.parse_geom_data()
+    # grd._parse_BOUNDARIES()
     plt.ion()
     plt.figure()
     grd.plot_geom(plt.gca())

@@ -36,10 +36,7 @@ frequent_used_unit_to_SI_unit = {
 }
 
 
-class MaterialType(enum.Enum):
-    CONDUCTOR = 0
-    DIELECTRIC = 1
-    VOID = 2
+
 
 class ParserBase:
     """
