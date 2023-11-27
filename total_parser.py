@@ -28,11 +28,20 @@ import re
 import fld_parser
 import grd_parser
 import par_parser
+import log_parser
 from _logging import logger
 from filenametool import ExtTool, validateTitle
 from sympy.physics import units
 
 default_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.geom.png"
+def plot_geometry(grd:grd_parser.GRD,log:log_parser.LOG ):
+    """
+    :param grd:
+    :param log:
+    :return:
+    """
+    # TODO:
+
 
 
 def plot_geom(geom_path: str, geom_range: typing.Iterable[float], ax, alpha=.7, axial_symetry=True):
@@ -136,7 +145,7 @@ def plot_Ez_with_phasespace(grd: grd_parser, par: par_parser.PAR, t, axs: List[p
     # datas = range_datas[titles[0]], phasespace_datas[titles[1]]
     parsers = [grd, par]
     fmts = ["", '.']
-    kwargs_for_plot = [dict(), dict()  # {"markersize": .2}
+    kwargs_for_plot = [dict(),   {"markersize": .005}
                        ]
     # ylabels = []
     for i in range(2):
@@ -257,19 +266,19 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
         phase_space_data_z_r_bottom_side = phase_space_data_z_r.copy()
         phase_space_data_z_r_bottom_side[:, 1] *= -1
         phase_space_data_z_r = numpy.vstack([phase_space_data_z_r, phase_space_data_z_r_bottom_side])
-        axs[0].scatter(*phase_space_data_z_r.T, c='w', s=1,
+        axs[0].scatter(*phase_space_data_z_r.T, c='w', s=.005,
                        )
 
         # axs[0].set_title(contour_title)
         # fig :plt.Figure= plt.figure()
         # grid_spec = plt.GridSpec(2,10,wspace=0.5,hspace=0.5)
         # axs[0] = fig.add_subplot
-        axs[1].scatter(*old_phasespace_data_z_Ek[:, 1:], s=.3,
+        axs[1].scatter(*old_phasespace_data_z_Ek[:, 1:], s=.005,
                        label="old data")
 
         new_phasespace_z_Ek_data = phasespace_z_Ek_data.values.T
         # for each_phasespace_data_z_Ek in old_phasespace_data_z_Ek:
-        axs[1].scatter(*new_phasespace_z_Ek_data, s=.3,
+        axs[1].scatter(*new_phasespace_z_Ek_data, s=.005,
                        label="t = %.4e s" % t_actual)
         old_phasespace_data_z_Ek = numpy.hstack([old_phasespace_data_z_Ek, new_phasespace_z_Ek_data])
         particle_zs = new_phasespace_z_Ek_data[0]
@@ -283,7 +292,7 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
     axs[1].grid()
     axs[0].set_ylabel("r / m")
     axs[1].set_xlabel('z / m')
-    axs[1].set_ylabel('energy of particle / eV')
+    axs[1].set_ylabel('particle energy/ eV')
 
     t_Ez, Ez_data, _ = grd.get_data_by_time(t_actual, Ez_title)
 
@@ -301,11 +310,12 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
     # axs[1].set_title(phasespace_title_z_Ek)
     pts, labels = axs[1].get_legend_handles_labels()
     fig.legend(pts, labels, loc='lower right')
-    cbar = fig.colorbar(cf, ax=axs,  # location=""
+    cbar = fig.colorbar(cf,# ax=axs,  # location=""
                         )
     # logger.info("End plot")
 
     return old_phasespace_data_z_Ek, t_actual
+
 
 
 def plot_contour_phasespace_Iz_Ez(fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, t, axs: List[plt.Axes],
@@ -449,14 +459,14 @@ def export_contours_in_folder(
     plt.ioff()
     res_dir_name_with_title = os.path.join(res_dir_name, validateTitle(contour_title))
     os.makedirs(res_dir_name_with_title, exist_ok=True)
-    geom_path = et.get_name_with_ext(ExtTool.FileType.geom_png)
+    geom_path = et.get_name_with_ext(ExtTool.FileType.png)
 
     for t in numpy.arange(t_start, t_end, dt):
         old_pahsespace_data_z_Ek, t_actual = plot_contour_vs_phasespace(
             fld, par, grd, t,
             plt.subplots(
                 2, 1, sharex=True,
-                figsize=(12, 9), constrained_layout=True)[1],
+                figsize=(2*5, 2*9), constrained_layout=True)[1],
             frac,
             geom_picture_path=geom_path,
             # geom_range=[-1.3493e-3, 0, 25.257e-3, 3.9963e-3],
@@ -498,14 +508,14 @@ def export_contour_phasespace_Ez_Iz_in_folder(
     plt.ioff()
     res_dir_name_with_title = os.path.join(res_dir_name, validateTitle(contour_title))
     os.makedirs(res_dir_name_with_title, exist_ok=True)
-    geom_path = et.get_name_with_ext(ExtTool.FileType.geom_png)
+    geom_path = et.get_name_with_ext(ExtTool.FileType.png)
 
     for t in numpy.arange(t_start, t_end, dt):
         old_pahsespace_data_z_Ek, t_actual = plot_contour_vs_phasespace(
             fld, par, grd, t,
             plt.subplots(
                 2, 1, sharex=True,
-                figsize=(16, 9), constrained_layout=True)[1],
+                figsize=(5*2, 9*2), constrained_layout=True)[1],
             frac,
             geom_picture_path=geom_path,
             # geom_range=[-1.3493e-3, 0, 25.257e-3, 3.9963e-3],
@@ -607,13 +617,13 @@ def plot_obs_Ez_JDA(grd: grd_parser.GRD, Ez_title, JDA_title, axs: typing.List[p
 
 if __name__ == '__main__':
     filename_no_ext = os.path.splitext(
-        r"E:\GeneratorAccelerator\manual\KaGA-coils-pillbox-cutoffneck.toc"
+        r"E:\GeneratorAccelerator\Genac\optmz\Genac20G100keV_1\粗网格\单独处理\Genac20G100keV_1_MC_20231112_054929_18-HiQ-Acc-witness.png"
     )[0]
-    phasespace_title_z_Ek = ' ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
+    phasespace_title_z_Ek = ' ALL PARTICLES @AXES(X1,KE)-#5 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r = ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
-    Ez_title = ' FIELD EZ @LINE_WITNESS_PARTICLE_MOVING$,FFT #4.1'
+    Ez_title = ' FIELD EZ @CENTRAL_CHANNEL.LINE$ #8.1'
     contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#2'
-    contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#4'
+    contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#3'
     obs_title_time_domain = ' FIELD E1 @PROBE0_3,FFT-#7.1'
     obs_title_frequency_domain = ' FIELD E1 @PROBE0_3,FFT-#7.2'
 
@@ -627,20 +637,20 @@ if __name__ == '__main__':
     copy_m2d_to_res_folder(res_dir_name, et)
     t_end = grd.ranges[Ez_title][-1]['t']
     dt = fld.all_generator[contour_title_Ez][1]['t'] - fld.all_generator[contour_title_Ez][0]['t']
-    plot_Ez_z_Ek_all_time(grd, par, numpy.arange(0, t_end, dt),
-                          os.path.join(res_dir_name, 'Ez_along_z.png'),
-                          Ez_title, phasespace_title_z_Ek)
+    # plot_Ez_z_Ek_all_time(grd, par, numpy.arange(0, t_end, dt),
+    #                       os.path.join(res_dir_name, 'Ez_along_z.png'),
+    #                       Ez_title, phasespace_title_z_Ek)
 
     export_contours_in_folder(fld, par, grd, et, contour_title_Ez, Ez_title, phasespace_title_z_r,
                               phasespace_title_z_Ek,
                               res_dir_name, 0, t_end, dt,
-                              contour_range=[-70e6, 70e6]
+                              contour_range=[-100e6, 100e6]
                               )
     # _, Ezmax = get_min_and_max(fld, contour_title_E_abs)
     export_contours_in_folder(fld, par, grd, et, contour_title_E_abs, Ez_title, phasespace_title_z_r,
                               phasespace_title_z_Ek,
                               res_dir_name, 0, t_end, dt,
-                              contour_range=[0, 1e6]
+                              contour_range=[0, 100e6]
                               )
     啊啊啊啊
     Z, R = fld.x1x2grid[contour_title_E_abs]
