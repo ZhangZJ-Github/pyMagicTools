@@ -34,14 +34,6 @@ from filenametool import ExtTool, validateTitle
 from sympy.physics import units
 
 default_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.geom.png"
-def plot_geometry(grd:grd_parser.GRD,log:log_parser.LOG ):
-    """
-    :param grd:
-    :param log:
-    :return:
-    """
-    # TODO:
-
 
 
 def plot_geom(geom_path: str, geom_range: typing.Iterable[float], ax, alpha=.7, axial_symetry=True):

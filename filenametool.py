@@ -17,6 +17,7 @@ class ExtTool:
         grd = ".grd"
         m2d = ".m2d"
         toc = '.toc'
+        log = '.log'
         geom_png = '.geom.png'
         png = '.png'
 
