@@ -240,25 +240,6 @@ class GRD(_base.ParserBase):
             lambda ranges, i: ranges[i]["data"])
 
 
-def plot_EZ_JZ(all_range_data, t, axs: List[plt.Axes]  # = plt.subplots(2, 1, sharex=True)[1]
-               ):
-    assert len(axs) == 2
-    titles = [" FIELD EZ @LINE_AXIS$ #1.1", " FIELD JZ__ELECTRON @LINE_AXIS$ #2.1"]
-    fmts = ["", '']
-    # ylabels = []
-    for i in range(2):
-        title = titles[i]
-        data_all_time = all_range_data[title]
-        t, data_, _ = _base.find_data_near_t(data_all_time, t)
-        # data_.iloc[:, 0] *= 1e3
-        axs[i].plot(*(data_.values.T.tolist()), fmts[i], label="t = %.4e" % t)
-        axs[i].set_title(titles[i])
-        # axs[i].legend()
-        axs[i].grid()
-    plt.ticklabel_format(style='sci', scilimits=(-1, 2), axis='x')
-    axs[1].legend()
-    # plt.suptitle("t = %.2e" % t)
-
 
 if __name__ == '__main__':
     # filename = r"F:\MagicFiles\CherenkovAcc\cascade\Coax-2-cascade-higher-gradient-04.grd"
@@ -270,13 +251,3 @@ if __name__ == '__main__':
     plt.ion()
     plt.figure()
     grd.plot_geom(plt.gca())
-    啊啊啊啊
-    grd.get_block_type(grd.block_list[-1])
-    rangedata = grd.parse_all_range_datas()
-    fig, axs = plt.subplots(2, 1, sharex=True)
-    ts = numpy.arange(0e-12, 130e-12, 4e-12)
-    # ts =numpy.array([30e-12,40e-12,50e-12,*ts])
-    for t in ts:
-        plot_EZ_JZ(rangedata, t, axs)
-
-    plt.show()

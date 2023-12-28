@@ -63,3 +63,9 @@ geom.plot(plt.gca())
 ```
 ![24f98c60e811c85ee045b70eef7fd78b.png](.md_attachments/24f98c60e811c85ee045b70eef7fd78b.png)
 ![2f1e24d84df5afcd85ada993bc97f364.png](.md_attachments/2f1e24d84df5afcd85ada993bc97f364.png)
+```python
+plt.figure()
+geom.plot(plt.gca())
+plt.scatter(*par.phasespaces[' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'][-5]['data'].values.T,s = 0.0001,c ='r')
+```
+![aac83820945a4b7f782e547b341c4108.png](.md_attachments/aac83820945a4b7f782e547b341c4108.png)
