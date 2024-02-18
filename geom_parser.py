@@ -9,6 +9,7 @@ import os.path
 import matplotlib
 import numpy
 
+import _base
 from _logging import logger
 
 matplotlib.use("TkAgg")
@@ -16,6 +17,7 @@ matplotlib.rcParams['font.family'] = 'SimHei'
 import matplotlib.pyplot
 
 matplotlib.pyplot.rcParams['axes.unicode_minus'] = False
+import matplotlib.image as mpimg  # mpimg 用于读取图片
 
 import os.path
 
@@ -56,6 +58,7 @@ class GEOM:
         """
         :param filename: 后缀无所谓
         """
+
         self.filename_no_ext = filename_no_ext = os.path.splitext(filename)[0]
         self.grd = grd_parser.GRD(
             filenametool.ExtTool(filename_no_ext).get_name_with_ext(filenametool.ExtTool.FileType.grd))
@@ -80,9 +83,9 @@ class GEOM:
     def plot_shape(
             ax: plt.Axes,
             shape: typing.Union[shapely.geometry.Polygon,
-                                shapely.geometry.Point,
-                                shapely.geometry.LineString,
-                                str],
+            shapely.geometry.Point,
+            shapely.geometry.LineString,
+            str],
             material: ObjectType):
         if isinstance(shape, str):
             logger.warning("Object '%s' is ignored" % shape)
@@ -99,10 +102,65 @@ class GEOM:
         return ax
 
 
+def save_fig_no_margins():
+    pass
+
+
+def export_geometry(geom: GEOM, white_to_transparent: bool = False):
+    """
+
+    @return:  png_path, xlim, ylim
+    """
+    et = filenametool.ExtTool(geom.filename_no_ext)
+    plt.figure(  # tight_layout = True
+    )
+    geom.plot(plt.gca())
+    png_path = et.get_name_with_ext(et.FileType.png)
+    # plt.gca().set_ylim(0, None)
+    plt.axis('off')
+    plt.margins(0, 0)
+    # plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0, wspace=0)
+    plt.savefig(png_path,
+                bbox_inches='tight', pad_inches=0,
+                dpi=200
+                )
+    xlim, ylim = plt.gca().get_xlim(), plt.gca().get_ylim()
+    plt.close()
+    if white_to_transparent:
+        png_white_to_transparent(png_path)
+    return png_path, xlim, ylim
+def png_color_to_transparent(png_path:str,color:typing.Tuple[float,float,float]):
+
+    """
+    将png中的某一种颜色改为透明
+    """
+    # matplotlib.colors.colorConverter.to_rgb()
+
+    img_data = mpimg.imread(png_path)
+    # logger.info(set(['%s' % color for color in ((255 * img_data).astype(int)).reshape(-1, 4).tolist()]))
+    rgb_arr = (#255 *
+              img_data[:, :, :3]).astype(int)
+
+    flter = numpy.ones_like(True, shape =rgb_arr.shape[:2])
+    for i,channel_value in enumerate(color):
+        flter&=(rgb_arr[:, :, i] == channel_value)
+    _index = numpy.where(flter)
+
+    img_data[*_index, 3] = 0
+    plt.imsave(png_path, img_data)
+
+def png_white_to_transparent(png_path: str):
+    """
+    将png中白色部分转化为透明色
+    """
+    png_color_to_transparent(png_path,[1.,1.,1.])
+
+
 if __name__ == '__main__':
     plt.ion()
     # filename = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.grd"
-    filename = r"E:\GeneratorAccelerator\Genac\optmz\Genac10G50keV\粗网格\单独处理\Genac10G50keV2.grd"
-    geom = GEOM(filename)
+    geom = GEOM(r"E:\BigFiles\GENAC\GENACX50kV\optimizing\GenacX50kV_tmplt_20240210_051249_02.m2d")
+    export_geometry(geom, True)
+
     plt.figure()
     geom.plot(plt.gca())

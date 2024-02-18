@@ -36,7 +36,7 @@ from sympy.physics import units
 default_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.geom.png"
 
 
-def plot_geom(geom_path: str, geom_range: typing.Iterable[float], ax, alpha=.7, axial_symetry=True):
+def plot_geom(geom_path: str, geom_range: typing.Iterable[float], ax:plt.Axes, alpha=.7, axial_symetry=True):
     """
 
     :param geom_path:
@@ -57,7 +57,9 @@ def plot_geom(geom_path: str, geom_range: typing.Iterable[float], ax, alpha=.7, 
     ax.imshow(img_data, alpha=alpha,
               extent=numpy.array((
                   zmin, zmax, rmin, rmax
-              )))  # 显示几何结构
+              )),
+
+              )  # 显示几何结构
 
 
 def get_partial_data(geom_range, x1x2grid: typing.Tuple[numpy.ndarray, numpy.ndarray],
@@ -235,10 +237,12 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
 
     cf = axs[0].contourf(
         x1g_sym, x2g_sym, numpy.vstack([zoomed_field_data[::-1], zoomed_field_data]),
-        numpy.linspace(vmin, vmax, 50),
+        numpy.linspace(vmin, vmax, 15),
         cmap=plt.get_cmap('jet'),
-        alpha=.7, extend='both'
+        alpha=1, extend='both'
     )
+    cf.set_zorder(-1)
+    # plot_geom(geom_picture_path, geom_range, axs[0], 1, True)
     axs[0].set_aspect('equal',  # 'box'
                       )
     # if (not geom_picture_path) or (not os.path.exists(geom_picture_path)):
