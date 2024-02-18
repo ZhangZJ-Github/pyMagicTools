@@ -77,10 +77,10 @@ import geom_parser
 
 geoms = {
     before: geom_parser.GEOM(
-        r"F:\papers\OptimizationHPM\ICCEM\Word\support\优化前\RSSE_template_20230628_224345_41810688.grd"),
+        r"F:\papers\OptimizationHPM\ICCEM\support\优化前\RSSE_template_20230628_224345_41810688.grd"),
     after: geom_parser.GEOM(
-        r"F:\papers\OptimizationHPM\ICCEM\Word\support\优化后\RSSE_template_20230805_034810_37761024.grd"),
-    after_Biased: geom_parser.GEOM(r"F:\papers\OptimizationHPM\ICCEM\Word\support\优化后\base.grd")
+        r"F:\papers\OptimizationHPM\ICCEM\support\优化后\RSSE_template_20230805_034810_37761024.grd"),
+    after_Biased: geom_parser.GEOM(r"F:\papers\OptimizationHPM\ICCEM\support\优化后\base.grd")
 }
 grds = {key:geoms[key].grd for key in geoms}
 pars = {key: par_parser.PAR(geoms[key].filename_no_ext + '.par') for key in geoms}
