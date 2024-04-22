@@ -6,6 +6,7 @@
 # @Software: PyCharm
 import os.path
 
+import fld_parser
 import matplotlib
 import numpy
 
@@ -42,7 +43,7 @@ class ObjectType(enum.Enum):
 
 colormap = {
     ObjectType.CONDUCTOR: (190, 190, 190, 1),  # RGBA
-    ObjectType.DIELECTRIC: (0, 255, 127, 1),
+    ObjectType.DIELECTRIC:(255, 255, 255, 1),# (0, 255, 127, 1),
     ObjectType.VACUUM: (255, 255, 255, 1),
     ObjectType.PORT: (255, 255, 0, 1),
     ObjectType.AXIAL: (0, 0, 255, 1)
@@ -54,9 +55,10 @@ colormap_normalized = {t: numpy.array(colormap[t]) / (255, 255, 255, 1) for t in
 class GEOM:
     MAX_CHAR_OF_VALUE_IN_STRUCTURE_GENERATOR_RESULT = 16
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, grd: grd_parser.GRD = None):
         """
         :param filename: 后缀无所谓
+        :@param grd: 由于解析grd耗时较长，若之前已经解析过，可以直接传入。
         """
 
         self.filename_no_ext = filename_no_ext = os.path.splitext(filename)[0]
