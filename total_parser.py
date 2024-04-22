@@ -15,6 +15,7 @@ import _base
 matplotlib.use("TkAgg")
 matplotlib.rcParams['font.family'] = 'SimHei'
 import matplotlib.pyplot
+
 matplotlib.pyplot.rcParams['axes.unicode_minus'] = False
 
 import os.path
@@ -28,7 +29,6 @@ import re
 import fld_parser
 import grd_parser
 import par_parser
-import log_parser
 from _logging import logger
 from filenametool import ExtTool, validateTitle
 from sympy.physics import units
@@ -36,7 +36,7 @@ from sympy.physics import units
 default_geom_path = r"D:\MagicFiles\CherenkovAcc\cascade\min_case_for_gradient_test\test_diffraction-23.geom.png"
 
 
-def plot_geom(geom_path: str, geom_range: typing.Iterable[float], ax:plt.Axes, alpha=.7, axial_symetry=True):
+def plot_geom(geom_path: str, geom_range: typing.Iterable[float], ax: plt.Axes, alpha=.7, axial_symetry=True):
     """
 
     :param geom_path:
@@ -139,7 +139,7 @@ def plot_Ez_with_phasespace(grd: grd_parser, par: par_parser.PAR, t, axs: List[p
     # datas = range_datas[titles[0]], phasespace_datas[titles[1]]
     parsers = [grd, par]
     fmts = ["", '.']
-    kwargs_for_plot = [dict(),   {"markersize": .005}
+    kwargs_for_plot = [dict(), {"markersize": .005}
                        ]
     # ylabels = []
     for i in range(2):
@@ -239,9 +239,10 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
         x1g_sym, x2g_sym, numpy.vstack([zoomed_field_data[::-1], zoomed_field_data]),
         numpy.linspace(vmin, vmax, 15),
         cmap=plt.get_cmap('jet'),
-        alpha=1, extend='both'
+        alpha=1, extend='both',
+        zorder=-1
     )
-    cf.set_zorder(-1)
+    # cf.set_zorder(-1)
     # plot_geom(geom_picture_path, geom_range, axs[0], 1, True)
     axs[0].set_aspect('equal',  # 'box'
                       )
@@ -306,12 +307,11 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
     # axs[1].set_title(phasespace_title_z_Ek)
     pts, labels = axs[1].get_legend_handles_labels()
     fig.legend(pts, labels, loc='lower right')
-    cbar = fig.colorbar(cf,# ax=axs,  # location=""
+    cbar = fig.colorbar(cf,  # ax=axs,  # location=""
                         )
     # logger.info("End plot")
 
     return old_phasespace_data_z_Ek, t_actual
-
 
 
 def plot_contour_phasespace_Iz_Ez(fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, t, axs: List[plt.Axes],
@@ -462,7 +462,7 @@ def export_contours_in_folder(
             fld, par, grd, t,
             plt.subplots(
                 2, 1, sharex=True,
-                figsize=(2*5, 2*9), constrained_layout=True)[1],
+                figsize=(2 * 5, 2 * 9), constrained_layout=True)[1],
             frac,
             geom_picture_path=geom_path,
             # geom_range=[-1.3493e-3, 0, 25.257e-3, 3.9963e-3],
@@ -511,7 +511,7 @@ def export_contour_phasespace_Ez_Iz_in_folder(
             fld, par, grd, t,
             plt.subplots(
                 2, 1, sharex=True,
-                figsize=(5*2, 9*2), constrained_layout=True)[1],
+                figsize=(5 * 2, 9 * 2), constrained_layout=True)[1],
             frac,
             geom_picture_path=geom_path,
             # geom_range=[-1.3493e-3, 0, 25.257e-3, 3.9963e-3],

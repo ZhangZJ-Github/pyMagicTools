@@ -60,6 +60,8 @@ class GEOM:
         """
 
         self.filename_no_ext = filename_no_ext = os.path.splitext(filename)[0]
+        # Ended with .png
+        self.filename = filenametool.ExtTool(filename_no_ext).get_name_with_ext(filenametool.ExtTool.FileType.png)
         self.grd = grd_parser.GRD(
             filenametool.ExtTool(filename_no_ext).get_name_with_ext(filenametool.ExtTool.FileType.grd))
         self.log = log_parser.LOG(
@@ -68,6 +70,8 @@ class GEOM:
         # 因log文件中structure generator result表的长度限制，截取每项的前几个字符
         self.shapes = {key[:GEOM.MAX_CHAR_OF_VALUE_IN_STRUCTURE_GENERATOR_RESULT]: self._shapes[key] for key in
                        self._shapes}
+        self.export_geometry(True)
+
 
     def plot(self, ax: plt.Axes) -> plt.Axes:
         """
@@ -78,6 +82,31 @@ class GEOM:
             self.plot_shape(ax, self.shapes.get(objname, objname),
                             ObjectType[self.log.geom_structure_generator_result['Type'][i]])
         return ax
+
+
+    def export_geometry(geom, white_to_transparent: bool = False):
+        """
+
+        @return:  png_path, xlim, ylim
+        """
+        et = filenametool.ExtTool(geom.filename_no_ext)
+        plt.figure(  # tight_layout = True
+        )
+        geom.plot(plt.gca())
+        png_path =geom.filename# et.get_name_with_ext(et.FileType.png)
+        # plt.gca().set_ylim(0, None)
+        plt.axis('off')
+        plt.margins(0, 0)
+        # plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0, wspace=0)
+        plt.savefig(png_path,
+                    bbox_inches='tight', pad_inches=0,
+                    dpi=200
+                    )
+        geom.x1lim, geom. x2lim = plt.gca().get_xlim(), plt.gca().get_ylim()
+        plt.close()
+        if white_to_transparent:
+            png_white_to_transparent(png_path)
+        return png_path, geom. x1lim, geom. x2lim
 
     @staticmethod
     def plot_shape(
@@ -111,24 +140,7 @@ def export_geometry(geom: GEOM, white_to_transparent: bool = False):
 
     @return:  png_path, xlim, ylim
     """
-    et = filenametool.ExtTool(geom.filename_no_ext)
-    plt.figure(  # tight_layout = True
-    )
-    geom.plot(plt.gca())
-    png_path = et.get_name_with_ext(et.FileType.png)
-    # plt.gca().set_ylim(0, None)
-    plt.axis('off')
-    plt.margins(0, 0)
-    # plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0, wspace=0)
-    plt.savefig(png_path,
-                bbox_inches='tight', pad_inches=0,
-                dpi=200
-                )
-    xlim, ylim = plt.gca().get_xlim(), plt.gca().get_ylim()
-    plt.close()
-    if white_to_transparent:
-        png_white_to_transparent(png_path)
-    return png_path, xlim, ylim
+    return geom.export_geometry(white_to_transparent)
 def png_color_to_transparent(png_path:str,color:typing.Tuple[float,float,float]):
 
     """
@@ -146,7 +158,7 @@ def png_color_to_transparent(png_path:str,color:typing.Tuple[float,float,float])
         flter&=(rgb_arr[:, :, i] == channel_value)
     _index = numpy.where(flter)
 
-    img_data[*_index, 3] = 0
+    img_data[(*_index), 3] = 0
     plt.imsave(png_path, img_data)
 
 def png_white_to_transparent(png_path: str):
