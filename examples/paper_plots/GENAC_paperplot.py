@@ -22,15 +22,15 @@ import par_parser
 from filenametool import ExtTool
 
 if __name__ == '__main__':
-    et = ExtTool.from_filename(r"E:\BigFiles\GENAC\GENACX50kV\optimizing\GenacX50kV_tmplt_20240210_051249_02.m2d")
+    et = ExtTool.from_filename(r"F:\RBWO\结果保存\对比结果保存\加第二个输出\output_20240519_041236_56.m2d")
     filename_no_ext = et.filename_no_ext
     phasespace_title_z_Ek = ' ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r = ' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
-    Ez_title = ' FIELD EZ @LINE_PARTICLE_MOVING$,FFT #3.1'
-    contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#2'
-    contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#3'
-    obs_title_time_domain = ' FIELD E1 @PROBE0_3,FFT-#7.1'
-    obs_title_frequency_domain = ' FIELD E1 @PROBE0_3,FFT-#7.2'
+    # Ez_title = ' FIELD EZ @LINE_PARTICLE_MOVING$,FFT #3.1'
+    contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#3'
+    # contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#3'
+    # obs_title_time_domain = ' FIELD E1 @PROBE0_3,FFT-#7.1'
+    # obs_title_frequency_domain = ' FIELD E1 @PROBE0_3,FFT-#7.2'
 
     et = ExtTool(filename_no_ext)
     geom = geom_parser.GEOM(et.get_name_with_ext(ExtTool.FileType.fld))

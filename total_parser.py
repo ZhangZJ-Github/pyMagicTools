@@ -194,7 +194,29 @@ def get_min_and_max(fld: fld_parser.FLD, contour_title, indexes: slice = None):
         vmax = max(field_range_end, vmax)
         vmin = min(field_range_start, vmin)
     return vmin, vmax
+def get_min_and_max_z(fld: fld_parser.FLD, contour_title, indexes: slice = None):
+    vmax = 0
+    vmin = 0
+    fd1 = 0
+    fd2 = 0
+    filtered_generator = fld.all_generator[contour_title]
+    if indexes:
+        filtered_generator = filtered_generator[indexes]
 
+    for fd in filtered_generator:
+        field_range_start, field_range_end, field_range_step = fd['generator'].get_field_range(fld.blocks_groupby_type)
+        vmax = max(field_range_end, vmax)
+    if (vmax == field_range_end):
+        fd1 = fd
+
+    else:
+        fd1 = fd1
+    vmin = min(field_range_start, vmin)
+    if (vmin == field_range_start):
+        fd2 = fd
+    else:
+        fd2 = fd2
+    return fd1, fd2
 
 def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, t, axs: List[plt.Axes],
                                frac=0.3,
@@ -239,9 +261,10 @@ def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: gr
         x1g_sym, x2g_sym, numpy.vstack([zoomed_field_data[::-1], zoomed_field_data]),
         numpy.linspace(vmin, vmax, 15),
         cmap=plt.get_cmap('jet'),
-        alpha=1, extend='both'
+        alpha=1, extend='both',
+        zorder =-1
     )
-    cf.set_zorder(-1)
+    # cf.set_zorder(-1)
     # plot_geom(geom_picture_path, geom_range, axs[0], 1, True)
     axs[0].set_aspect('equal',  # 'box'
                       )

@@ -55,7 +55,7 @@ def export_contours_in_folder(
             Ez_title=Ez_title, phasespace_title_z_r=phasespace_title_z_r, phasespace_title_z_Ek=phasespace_title_z_Ek
         )
 
-        plt.gcf().suptitle(os.path.split(res_dir_name)[1])
+        plt.gcf().suptitle(None)
         # plt.get_current_fig_manager().window.state('zoomed')
         plt.gcf().savefig("%s/%03d_ps.png" % (res_dir_name_with_title, numpy.round(t_actual * 1e12)))
         plt.close(plt.gcf())
@@ -73,8 +73,6 @@ def make_default_result_dir(parsed_obj: _base.ParserBase):
     return res_dir_name
 
 
-
-
 def get_default_ts(fld: fld_parser.FLD):
     ts = []
     for generator in fld.all_generator[contour_title_Ez]:
@@ -85,12 +83,12 @@ def get_default_ts(fld: fld_parser.FLD):
 
 
 if __name__ == '__main__':
-    et = ExtTool.from_filename(r"E:\BigFiles\GENAC\GENACX50kV\optimizing\GenacX50kV_tmplt_20240210_051249_02.m2d")
+    et = ExtTool.from_filename(r"F:\RBWO\TEST\april\降场强1\low1.m2d")
     filename_no_ext = et.filename_no_ext
     phasespace_title_z_Ek = ' ALL PARTICLES @AXES(X1,KE)-#2 $$$PLANE_X1_AND_KE_AT_X0=  0.000'
     phasespace_title_z_r =' ALL PARTICLES @AXES(X1,X2)-#1 $$$PLANE_X1_AND_X2_AT_X0=  0.000'
-    Ez_title = ' FIELD EZ @LINE_PARTICLE_MOVING$,FFT #3.1'
-    contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#2'
+    Ez_title = ' FIELD EZ @BEAM_LINE$ #1.1'
+    contour_title_Ez = ' FIELD EZ @OSYS$AREA,SHADE-#3'
     contour_title_E_abs = ' FIELD |E| @OSYS$AREA,SHADE-#3'
     obs_title_time_domain = ' FIELD E1 @PROBE0_3,FFT-#7.1'
     obs_title_frequency_domain = ' FIELD E1 @PROBE0_3,FFT-#7.2'
@@ -117,9 +115,10 @@ if __name__ == '__main__':
     export_contours_in_folder(fld, par, grd, et, contour_title_Ez, Ez_title, phasespace_title_z_r,
                               phasespace_title_z_Ek,
                               res_dir_name, ts,
-                              contour_range=[-10e6, 10e6]
+                              contour_range=[-250e6, 250e6]
                               )
-    # _, Ezmax = get_min_and_max(fld, contour_title_E_abs)
+    Ezmax = get_min_and_max_z(fld, contour_title_Ez)
+
     export_contours_in_folder(fld, par, grd, et, contour_title_E_abs, Ez_title, phasespace_title_z_r,
                               phasespace_title_z_Ek,
                               res_dir_name, ts,
