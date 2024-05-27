@@ -240,6 +240,7 @@ if __name__ == '__main__':
     os.makedirs(res_dir_name, exist_ok=True)
     copy_m2d_to_result_dir(res_dir_name, et)
     ts = get_default_ts(fld,contour_title_Ez)
+    Ezmax = get_EZmax_z_r_t(fld, contour_title_Ez)
     # ts = ts[::2]
     # t_end = grd.ranges[Ez_title][-1]['t']
     # dt = fld.all_generator[contour_title_Ez][1]['t'] - fld.all_generator[contour_title_Ez][0]['t']

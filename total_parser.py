@@ -4,6 +4,7 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : total_parser.py
 # @Software: PyCharm
+import array
 import shutil
 import time
 import typing
@@ -185,6 +186,7 @@ def get_min_and_max(fld: fld_parser.FLD, contour_title, indexes: slice = None):
     """
     vmax = 0
     vmin = 0
+
     filtered_generator = fld.all_generator[contour_title]
     if indexes:
         filtered_generator = filtered_generator[indexes]
@@ -192,10 +194,39 @@ def get_min_and_max(fld: fld_parser.FLD, contour_title, indexes: slice = None):
     for fd in filtered_generator:
         field_range_start, field_range_end, field_range_step = fd['generator'].get_field_range(fld.blocks_groupby_type)
         vmax = max(field_range_end, vmax)
-        vmin = min(field_range_start, vmin)
+
     return vmin, vmax
-
-
+def get_EZmax_z_r_t(fld: fld_parser.FLD, contour_title, indexes: slice = None):
+    """
+    获取.fld的contour数据中的最大值的网格位置以及时间
+    :param fld:
+    :param contour_title:
+    :return:
+    """
+    i_max1 = len(list(fld.all_generator[contour_title]))
+    vmax = 0
+    r1 = 0
+    z1 = 0
+    t = 0
+    for i in range(i_max1):
+        EZ = fld.all_generator[' FIELD EZ @OSYS$AREA,SHADE-#3'][0]['generator'].get_field_values(fld.blocks_groupby_type)[0]
+        z = EZ.shape[1]
+        r = EZ.shape[0]
+        for j in range(z):
+            for k in range(r):
+                x1 = EZ.__array__()[k][j]
+                if (vmax <= x1):
+                    r1= j
+                    z1 = k
+                    vmax = x1
+                    t=fld.all_generator[contour_title][i]['t']
+                else:
+                    r1 = r1
+                    z1 = z1
+                    vmax = vmax
+                    t = t
+    print(vmax, r1, z1, t)
+    return vmax, r1, z1, t
 def plot_contour_vs_phasespace(fld: fld_parser.FLD, par: par_parser.PAR, grd: grd_parser.GRD, t, axs: List[plt.Axes],
                                frac=0.3,
                                geom_picture_path=default_geom_path,
@@ -648,7 +679,7 @@ if __name__ == '__main__':
                               res_dir_name, 0, t_end, dt,
                               contour_range=[0, 100e6]
                               )
-    啊啊啊啊
+
     Z, R = fld.x1x2grid[contour_title_E_abs]
     plot_where_is_the_probe(et.get_name_with_ext(et.FileType.geom_png), [Z[0, 0], 0, Z[-1, -1], R[-1, -1]], grd,
                             obs_title_time_domain, plt.subplots(constrained_layout=True)[1])

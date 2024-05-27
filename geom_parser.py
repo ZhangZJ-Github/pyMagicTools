@@ -160,7 +160,7 @@ def png_color_to_transparent(png_path:str,color:typing.Tuple[float,float,float])
         flter&=(rgb_arr[:, :, i] == channel_value)
     _index = numpy.where(flter)
 
-    img_data[(*_index), 3] = 0
+    img_data[_index[0], _index[1], 3] = 0
     plt.imsave(png_path, img_data)
 
 def png_white_to_transparent(png_path: str):
