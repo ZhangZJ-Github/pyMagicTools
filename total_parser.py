@@ -209,7 +209,7 @@ def get_EZmax_z_r_t(fld: fld_parser.FLD, contour_title, indexes: slice = None):
     z1 = 0
     t = 0
     for i in range(i_max1):
-        EZ = fld.all_generator[contour_title][i]['generator']._field_value[0]
+        EZ = fld.all_generator[' FIELD EZ @OSYS$AREA,SHADE-#3'][0]['generator'].get_field_values(fld.blocks_groupby_type)[0]
         z = EZ.shape[1]
         r = EZ.shape[0]
         for j in range(z):

@@ -105,19 +105,20 @@ if __name__ == '__main__':
     os.makedirs(res_dir_name, exist_ok=True)
     copy_m2d_to_result_dir(res_dir_name, et)
     ts = get_default_ts(fld)
+    Ezmax = get_EZmax_z_r_t(fld, contour_title_Ez)
     # ts = ts[::2]
     # t_end = grd.ranges[Ez_title][-1]['t']
     # dt = fld.all_generator[contour_title_Ez][1]['t'] - fld.all_generator[contour_title_Ez][0]['t']
     # plot_Ez_z_Ek_all_time(grd, par, numpy.arange(0, t_end, dt),
     #                       os.path.join(res_dir_name, 'Ez_along_z.png'),
     #                       Ez_title, phasespace_title_z_Ek)
-
+    aaaa
     export_contours_in_folder(fld, par, grd, et, contour_title_Ez, Ez_title, phasespace_title_z_r,
                               phasespace_title_z_Ek,
                               res_dir_name, ts,
                               contour_range=[-250e6, 250e6]
                               )
-    Ezmax = get_min_and_max_z(fld, contour_title_Ez)
+    Ezmax = get_EZmax_z_r_t(fld, contour_title_Ez)
 
     export_contours_in_folder(fld, par, grd, et, contour_title_E_abs, Ez_title, phasespace_title_z_r,
                               phasespace_title_z_Ek,
