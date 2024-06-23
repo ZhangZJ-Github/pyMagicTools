@@ -41,6 +41,7 @@ class MagicResult:
                      contour_range: typing.Tuple[float, float] = None,
                      ):
         # if (x1g_Ez is None) or (x2g_Ez is None):
+        fld = self.fld
         x1g_Ez, x2g_Ez = fld.x1x2grid[
             contour_title]  # fld.all_generator[contour_title][0]['generator'].get_x1x2grid(fld.blocks_groupby_type)
         # t = 148.663e-9  # 135.448E-9
@@ -230,6 +231,7 @@ if __name__ == '__main__':
 
     et = ExtTool(filename_no_ext)
     geom = geom_parser.GEOM(et.get_name_with_ext(ExtTool.FileType.fld))
+    aa
     # png_path, xlim, ylim = geom_parser.export_geometry(geom, True)
     fld = fld_parser.FLD(et.get_name_with_ext(ExtTool.FileType.fld))
     grd = grd_parser.GRD(et.get_name_with_ext(ExtTool.FileType.grd))
